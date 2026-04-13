@@ -45,9 +45,6 @@ class Settings(BaseSettings):
     AI_MODEL: str = "llama-3.3-70b-versatile"
 
     # SMTP (OTP)
-    SMTP_HOST: str = "smtp.gmail.com"
-    SMTP_PORT: int = 587
-    SMTP_PASSWORD: str
     SENDER_EMAIL: str
     RESEND_API_KEY: str = ""
 
