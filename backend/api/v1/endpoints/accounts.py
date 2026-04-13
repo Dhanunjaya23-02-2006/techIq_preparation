@@ -7,7 +7,7 @@ import httpx
 import pyotp
 import qrcode
 import base64
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Body, Request, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Body, Request, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlmodel import Session, select, func, delete
@@ -38,6 +38,7 @@ def send_register_otp(
     *,
     db: Session = Depends(get_db),
     email: str = Body(..., embed=True),
+    background_tasks: BackgroundTasks,
 ) -> Any:
     """Send OTP for registration verification."""
     user = db.exec(select(User.id).where(User.email == email).limit(1)).first()
@@ -70,8 +71,7 @@ def send_register_otp(
     code = ''.join(random.choices(string.digits, k=6))
     
     from utils.email import send_otp_email
-    if not send_otp_email(email, code):
-        raise HTTPException(status_code=500, detail="Failed to send verification email")
+    background_tasks.add_task(send_otp_email, email, code)
     
     vc = VerificationCode(email=email, code=code)
     db.add(vc)
@@ -710,6 +710,7 @@ def forgot_password(
     *,
     db: Session = Depends(get_db),
     email: str = Body(..., embed=True),
+    background_tasks: BackgroundTasks,
 ) -> Any:
     """Generate and send/log password reset code."""
     user = db.exec(select(User.id).where(User.email == email).limit(1)).first()
@@ -747,7 +748,10 @@ def forgot_password(
     db.add(vc)
     db.commit()
     
-    # In a real app, send email here. For now, we log it.
+    # Send verification email
+    from utils.email import send_otp_email
+    background_tasks.add_task(send_otp_email, email, code)
+    
     print(f"PASSWORD RESET CODE FOR {email}: {code}")
     
     return {"message": "If an account exists with this email, a reset code has been sent."}
