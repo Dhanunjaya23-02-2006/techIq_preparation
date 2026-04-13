@@ -47,30 +47,53 @@ def send_otp_email(email: str, otp: str):
     """
     
     try:
-        # Note: If you haven't verified your domain in Resend, 
-        # you must use 'onboarding@resend.dev' as the sender.
-        # Otherwise, use your SENDER_EMAIL.
-        from_email = settings.SENDER_EMAIL
-        if "gmail.com" in from_email or "yahoo.com" in from_email:
-             # Most likely unverified domain since it's a personal email
-             logger.info("Using Resend onboarding email as sender (Personal emails not allowed as 'From' in Resend until domain verified)")
-             from_email = "onboarding@resend.dev"
-        
-        params = {
-            "from": f"{settings.PROJECT_NAME} <{from_email}>",
-            "to": [email],
-            "subject": subject,
-            "html": html,
-        }
+        # 1. Try sauravhathi/otp-service fallback if URL is provided
+        if settings.OTP_SERVICE_URL:
+            import httpx
+            logger.info(f"Attempting to send OTP to {email} via OTP Service...")
+            
+            payload = {
+                "email": email,
+                "type": "numeric",
+                "organization": settings.PROJECT_NAME,
+                "subject": "Verification Code",
+                "otp": otp # Some versions allow passing our own OTP
+            }
+            
+            with httpx.Client(timeout=10) as client:
+                resp = client.post(settings.OTP_SERVICE_URL, json=payload)
+                if resp.status_code in [200, 201]:
+                    logger.info(f"OTP email sent successfully via OTP Service to {email}")
+                    return True
+                else:
+                    logger.warning(f"OTP Service failed with status {resp.status_code}: {resp.text}")
 
-        logger.info(f"Sending OTP email to {email} via Resend...")
-        resend.Emails.send(params)
-        
-        logger.info(f"OTP email sent successfully to {email}")
-        return True
+        # 2. Resend API (Primary/Fallback)
+        if settings.RESEND_API_KEY:
+            from_email = settings.SENDER_EMAIL
+            if not from_email or "gmail.com" in from_email or "yahoo.com" in from_email:
+                 from_email = "onboarding@resend.dev"
+            
+            params = {
+                "from": f"{settings.PROJECT_NAME} <{from_email}>",
+                "to": [email],
+                "subject": subject,
+                "html": html,
+            }
+
+            logger.info(f"Sending OTP email to {email} via Resend...")
+            resend.Emails.send(params)
+            logger.info(f"OTP email sent successfully to {email}")
+            return True
+
+        # If we reach here, no service was configured
+        logger.error("No email service (Resend or OTP Service) is configured.")
+        logger.warning(f"DEV FALLBACK - OTP FOR {email}: {otp}")
+        return False
+
     except Exception as e:
-        logger.error(f"Error sending email via Resend: {e}")
-        # Final fallback for local testing if API fails
+        logger.error(f"Failed to send email: {e}")
+        # Final fallback for local testing if all APIs fail
         logger.warning(f"DEV FALLBACK - OTP FOR {email}: {otp}")
         return False
 
