@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_PASSWORD: str
     SENDER_EMAIL: str
+    RESEND_API_KEY: str = ""
 
     BACKEND_CORS_ORIGINS: Any = []
 

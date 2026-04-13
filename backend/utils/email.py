@@ -1,17 +1,25 @@
-import smtplib
 import logging
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import resend
 from core.config import settings
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
+# Initialize Resend
+if settings.RESEND_API_KEY:
+    resend.api_key = settings.RESEND_API_KEY
+
 def send_otp_email(email: str, otp: str):
     """
-    Send OTP verification email via SMTP.
-    Uses settings from core/config.py or environment variables.
+    Send OTP verification email via Resend API.
+    Used as an alternative to SMTP which is blocked on Railway Hobby plans.
     """
+    if not settings.RESEND_API_KEY:
+        logger.error("RESEND_API_KEY is not set. Cannot send email.")
+        # Fallback to console log for development
+        logger.warning(f"DEV FALLBACK - OTP FOR {email}: {otp}")
+        return False
+
     subject = f"{otp} is your verification code for {settings.PROJECT_NAME}"
     
     # Create the HTML body
@@ -38,35 +46,32 @@ def send_otp_email(email: str, otp: str):
     </html>
     """
     
-    msg = MIMEMultipart()
-    # Ensure From header is clean for Gmail
-    msg['From'] = f"{settings.PROJECT_NAME} <{settings.SENDER_EMAIL}>"
-    msg['To'] = email
-    msg['Subject'] = subject
-    
-    msg.attach(MIMEText(html, 'html'))
-    msg.attach(MIMEText(f"Your verification code is: {otp}", 'plain')) # Fallback plain text
-    
     try:
-        logger.info(f"Attempting to send OTP email to {email} using {settings.SMTP_HOST}:{settings.SMTP_PORT}")
+        # Note: If you haven't verified your domain in Resend, 
+        # you must use 'onboarding@resend.dev' as the sender.
+        # Otherwise, use your SENDER_EMAIL.
+        from_email = settings.SENDER_EMAIL
+        if "gmail.com" in from_email or "yahoo.com" in from_email:
+             # Most likely unverified domain since it's a personal email
+             logger.info("Using Resend onboarding email as sender (Personal emails not allowed as 'From' in Resend until domain verified)")
+             from_email = "onboarding@resend.dev"
         
-        # Use SMTP_SSL for port 465, else SMTP + starttls
-        if settings.SMTP_PORT == 465:
-            with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
-                server.login(settings.SENDER_EMAIL, settings.SMTP_PASSWORD)
-                server.send_message(msg)
-        else:
-            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
-                server.starttls()
-                server.login(settings.SENDER_EMAIL, settings.SMTP_PASSWORD)
-                server.send_message(msg)
-            
+        params = {
+            "from": f"{settings.PROJECT_NAME} <{from_email}>",
+            "to": [email],
+            "subject": subject,
+            "html": html,
+        }
+
+        logger.info(f"Sending OTP email to {email} via Resend...")
+        resend.Emails.send(params)
+        
         logger.info(f"OTP email sent successfully to {email}")
         return True
-    except smtplib.SMTPAuthenticationError:
-        logger.error(f"SMTP Authentication failed for {settings.SENDER_EMAIL}. Check if App Password is correct.")
-        return False
     except Exception as e:
-        logger.error(f"Error sending email to {email}: {type(e).__name__}: {e}")
+        logger.error(f"Error sending email via Resend: {e}")
+        # Final fallback for local testing if API fails
+        logger.warning(f"DEV FALLBACK - OTP FOR {email}: {otp}")
         return False
+
 

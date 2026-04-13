@@ -29,3 +29,4 @@ redis>=5.2.1
 locust>=2.31.0
 qrcode[pil]
 pyotp
+resend
