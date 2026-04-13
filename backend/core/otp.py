@@ -3,7 +3,7 @@ import string
 from datetime import datetime
 from sqlmodel import Session, select
 from models.verification import VerificationCode
-from core.email import send_otp_email
+from utils.email import send_otp_email
 
 def generate_otp(db: Session, email: str) -> str:
     # 6-digit numeric OTP

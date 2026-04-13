@@ -1,11 +1,16 @@
 import smtplib
+import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from core.config import settings
 
+# Set up logging
+logger = logging.getLogger(__name__)
+
 def send_otp_email(email: str, otp: str):
     """
     Send OTP verification email via SMTP.
+    Uses settings from core/config.py or environment variables.
     """
     subject = f"{otp} is your verification code for {settings.PROJECT_NAME}"
     
@@ -34,18 +39,34 @@ def send_otp_email(email: str, otp: str):
     """
     
     msg = MIMEMultipart()
-    msg['From'] = settings.SENDER_EMAIL
+    # Ensure From header is clean for Gmail
+    msg['From'] = f"{settings.PROJECT_NAME} <{settings.SENDER_EMAIL}>"
     msg['To'] = email
     msg['Subject'] = subject
     
     msg.attach(MIMEText(html, 'html'))
+    msg.attach(MIMEText(f"Your verification code is: {otp}", 'plain')) # Fallback plain text
     
     try:
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-            server.starttls()
-            server.login(settings.SENDER_EMAIL, settings.SMTP_PASSWORD)
-            server.send_message(msg)
+        logger.info(f"Attempting to send OTP email to {email} using {settings.SMTP_HOST}:{settings.SMTP_PORT}")
+        
+        # Use SMTP_SSL for port 465, else SMTP + starttls
+        if settings.SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
+                server.login(settings.SENDER_EMAIL, settings.SMTP_PASSWORD)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
+                server.starttls()
+                server.login(settings.SENDER_EMAIL, settings.SMTP_PASSWORD)
+                server.send_message(msg)
+            
+        logger.info(f"OTP email sent successfully to {email}")
         return True
-    except Exception as e:
-        print(f"Error sending email: {e}")
+    except smtplib.SMTPAuthenticationError:
+        logger.error(f"SMTP Authentication failed for {settings.SENDER_EMAIL}. Check if App Password is correct.")
         return False
+    except Exception as e:
+        logger.error(f"Error sending email to {email}: {type(e).__name__}: {e}")
+        return False
+
