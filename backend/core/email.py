@@ -39,27 +39,42 @@ def send_otp_email(email: str, otp: str):
     """
     
     msg = MIMEMultipart()
-    msg['From'] = f"{settings.PROJECT_NAME} <{settings.SENDER_EMAIL}>"
+    msg['From'] = settings.SENDER_EMAIL
     msg['To'] = email
     msg['Subject'] = subject
     
     msg.attach(MIMEText(html, 'html'))
     
     try:
+        logger.info(f"Attempting to send OTP email to {email} using {settings.SMTP_HOST}:{settings.SMTP_PORT}")
+        
         # Use SMTP_SSL for port 465, else SMTP + starttls
         if settings.SMTP_PORT == 465:
             server_class = smtplib.SMTP_SSL
+            logger.info("Using SMTP_SSL (Port 465)")
         else:
             server_class = smtplib.SMTP
+            logger.info(f"Using standard SMTP (Port {settings.SMTP_PORT})")
 
-        with server_class(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as server:
+        with server_class(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as server:
             if settings.SMTP_PORT != 465:
+                logger.info("Starting TLS...")
                 server.starttls()
+            
+            logger.info(f"Attempting login for {settings.SENDER_EMAIL}...")
             server.login(settings.SENDER_EMAIL, settings.SMTP_PASSWORD)
+            
+            logger.info("Sending message...")
             server.send_message(msg)
             
         logger.info(f"OTP email sent successfully to {email}")
         return True
+    except smtplib.SMTPAuthenticationError:
+        logger.error(f"SMTP Authentication failed for {settings.SENDER_EMAIL}. Check if App Password is correct.")
+        return False
+    except smtplib.SMTPConnectError:
+        logger.error(f"Failed to connect to SMTP server {settings.SMTP_HOST}. Check port and network.")
+        return False
     except Exception as e:
-        logger.error(f"Error sending email to {email}: {e}")
+        logger.error(f"Unexpected error sending email to {email}: {type(e).__name__}: {e}")
         return False
