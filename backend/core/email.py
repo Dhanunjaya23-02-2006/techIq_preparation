@@ -1,52 +1,65 @@
 import smtplib
 import logging
-from email.message import EmailMessage
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from core.config import settings
 
-def send_otp_email(to_email: str, otp: str) -> bool:
-    sender_email = settings.SENDER_EMAIL
-    password = settings.SMTP_PASSWORD
-    
-    if not password:
-        logging.error("SMTP_PASSWORD is not set in .env file. Cannot send OTP emails.")
-        # If no password is provided, returning False would block user registration. 
-        # You can fallback to returning True or logging the OTP in console depending on environment.
-        return False
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-    msg = EmailMessage()
-    msg['Subject'] = 'Railway Preparation - One-Time Password (OTP)'
-    msg['From'] = f"Railway Preparation <{sender_email}>"
-    msg['To'] = to_email
+def send_otp_email(email: str, otp: str):
+    """
+    Send OTP verification email via SMTP.
+    """
+    subject = f"{otp} is your verification code for {settings.PROJECT_NAME}"
     
-    html_content = f"""
+    # Create the HTML body
+    html = f"""
     <html>
-      <body style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-        <div style="background-color: #0d6efd; color: white; padding: 20px; border-radius: 5px;">
-          <h2 style="margin: 0;">Railway Preparation</h2>
-          <p>You received this email because you requested an OTP.</p>
-        </div>
-        <div style="margin-top: 30px;">
-          <p>Your One-Time Password (OTP) is:</p>
-          <h1 style="color: #0d6efd; letter-spacing: 5px; font-size: 32px;">{otp}</h1>
-        </div>
-      </body>
+        <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="background-color: #ff9933; padding: 20px; text-align: center;">
+                    <h1 style="color: #ffffff; margin: 0;">{settings.PROJECT_NAME}</h1>
+                </div>
+                <div style="padding: 30px; text-align: center;">
+                    <h2 style="color: #333333;">Verification Code</h2>
+                    <p style="color: #666666; font-size: 16px;">Please use the following 6-digit code to complete your registration.</p>
+                    <div style="background-color: #f0f4f8; padding: 15px; border-radius: 8px; display: inline-block; margin: 20px 0;">
+                        <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #ff9933;">{otp}</span>
+                    </div>
+                    <p style="color: #999999; font-size: 14px;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
+                </div>
+                <div style="background-color: #f9fafb; padding: 15px; text-align: center; border-top: 1px solid #eeeeee;">
+                    <p style="color: #aaaaaa; font-size: 12px; margin: 0;">&copy; 2026 {settings.PROJECT_NAME}. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
     </html>
     """
-    msg.add_alternative(html_content, subtype='html')
-
+    
+    msg = MIMEMultipart()
+    msg['From'] = f"{settings.PROJECT_NAME} <{settings.SENDER_EMAIL}>"
+    msg['To'] = email
+    msg['Subject'] = subject
+    
+    msg.attach(MIMEText(html, 'html'))
+    
     try:
-        # Using SMTP_SSL for port 465
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(sender_email, password)
+        # Use SMTP_SSL for port 465, else SMTP + starttls
+        if settings.SMTP_PORT == 465:
+            server_class = smtplib.SMTP_SSL
+        else:
+            server_class = smtplib.SMTP
+
+        with server_class(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as server:
+            if settings.SMTP_PORT != 465:
+                server.starttls()
+            server.login(settings.SENDER_EMAIL, settings.SMTP_PASSWORD)
             server.send_message(msg)
-        logging.info(f"OTP email sent successfully to {to_email}")
+            
+        logger.info(f"OTP email sent successfully to {email}")
         return True
-    except smtplib.SMTPAuthenticationError:
-        logging.error("SMTP Authentication failed. Check SENDER_EMAIL and SMTP_PASSWORD (App Password).")
-        return False
-    except smtplib.SMTPConnectError:
-        logging.error("Failed to connect to SMTP server. Check network or port 465.")
-        return False
     except Exception as e:
-        logging.error(f"Unexpected error sending email to {to_email}: {e}")
+        logger.error(f"Error sending email to {email}: {e}")
         return False
