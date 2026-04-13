@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     AI_MODEL: str = "llama-3.3-70b-versatile"
 
     # SMTP (OTP)
-    SENDER_EMAIL: str
+    SENDER_EMAIL: str = ""
     RESEND_API_KEY: str = ""
 
     BACKEND_CORS_ORIGINS: Any = []
