@@ -46,7 +46,7 @@ class Settings(BaseSettings):
 
     # SMTP (OTP)
     SENDER_EMAIL: str = ""
-    OTP_SERVICE_URL: str = "" # e.g., https://otp-service-saurav.vercel.app/api/otp/generate
+    OTP_SERVICE_URL: str = "" # e.g., https://otp-service-beta.vercel.app/api/otp/generate
 
     BACKEND_CORS_ORIGINS: Any = []
 
