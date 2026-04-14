@@ -157,6 +157,12 @@ def register_user(
         if not vc:
             raise HTTPException(status_code=400, detail="Invalid or expired verification code")
 
+    assigned_role = "student"
+    if user_in.role == "admin":
+        admin_exists = db.exec(select(User.id).where(User.role == "admin").limit(1)).first() is not None
+        if not admin_exists:
+            assigned_role = "admin"
+
     new_user = User(
         email=user_in.email,
         username=username,
@@ -164,7 +170,7 @@ def register_user(
         first_name=user_in.first_name,
         last_name=user_in.last_name,
         phone=user_in.phone,
-        role="student",
+        role=assigned_role,
         is_active=True,
         is_verified=True, # Mark as verified after successful OTP check
     )
