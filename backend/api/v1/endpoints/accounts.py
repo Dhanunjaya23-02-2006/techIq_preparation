@@ -245,14 +245,18 @@ async def login_access_token(
     
     is_valid = user and security.verify_password(form_data.password, user.password)
     
-    # Record Login Attempt
-    attempt = LoginAttempt(
-        username=form_data.username,
-        ip_address=ip_address,
-        success=is_valid
-    )
-    db.add(attempt)
-    db.commit()
+    # Record Login Attempt (non-critical — don't let logging failures crash login)
+    try:
+        attempt = LoginAttempt(
+            username=form_data.username,
+            ip_address=ip_address,
+            success=is_valid
+        )
+        db.add(attempt)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.warning(f"Failed to record login attempt: {e}")
 
     if not is_valid:
         raise HTTPException(status_code=400, detail="Incorrect username or password")

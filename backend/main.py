@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 from sqlmodel import SQLModel
+from sqlalchemy import text
 from api.v1.api import api_router
 from core.config import settings
 from core.db import engine
@@ -17,6 +18,18 @@ from models import users, questions, tests, content, subscriptions, pdf, notific
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
+    # Fix: Drop the foreign key constraint on login_attempts.username
+    # The column should NOT be a foreign key because we need to log
+    # login attempts for usernames/emails that don't exist in the users table.
+    try:
+        with engine.connect() as conn:
+            conn.execute(text(
+                "ALTER TABLE login_attempts DROP CONSTRAINT IF EXISTS login_attempts_username_fkey"
+            ))
+            conn.commit()
+            print("DB Migration: login_attempts FK constraint check complete.")
+    except Exception as e:
+        print(f"DB Migration note (non-critical): {e}")
 
 
 app = FastAPI(
@@ -65,14 +78,22 @@ def on_startup():
     create_db_and_tables()
 
 
+# ========================================================================
 # Middleware setup
-app.add_middleware(SecurityHeadersMiddleware)
+# IMPORTANT: FastAPI/Starlette executes middleware in REVERSE order of addition.
+# The LAST middleware added is the FIRST to execute (outermost wrapper).
+# CORSMiddleware MUST be the LAST added so it wraps everything and
+# always injects CORS headers, even on error/exception responses.
+# ========================================================================
 
+# 1. Inner middleware (added first, executed last)
 # Only add rate limiting if not explicitly disabled (for performance testing)
 if os.getenv("DISABLE_RATE_LIMIT", "false").lower() != "true":
     app.add_middleware(RateLimitMiddleware, limit=100, window=60)
 
-# Set all CORS enabled origins
+app.add_middleware(SecurityHeadersMiddleware)
+
+# 2. Outermost middleware (added last, executed first) — CORS
 if settings.BACKEND_CORS_ORIGINS:
     origins = [str(origin).rstrip("/") for origin in settings.BACKEND_CORS_ORIGINS]
     print(f"CORS origins: {origins}")
@@ -82,6 +103,7 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["*"],
     )
 else:
     # Fallback: include both local dev and production origins
@@ -97,6 +119,7 @@ else:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["*"],
     )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)

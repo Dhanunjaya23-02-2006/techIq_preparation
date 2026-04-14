@@ -153,7 +153,7 @@ class LoginAttempt(SQLModel, table=True):
     __tablename__ = "login_attempts"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    username: str = Field(foreign_key="users.username", ondelete="CASCADE", index=True)
+    username: str = Field(index=True)  # NOT a foreign key — must log attempts for non-existent users too
     ip_address: str = Field(index=True)
     success: bool = Field(default=False)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
