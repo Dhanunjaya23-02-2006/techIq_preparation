@@ -26,8 +26,20 @@ def create_db_and_tables():
             conn.execute(text(
                 "ALTER TABLE login_attempts DROP CONSTRAINT IF EXISTS login_attempts_username_fkey"
             ))
+            
+            # DB Migration: Add missing is_elite columns
+            try:
+                conn.execute(text("ALTER TABLE plans ADD COLUMN IF NOT EXISTS is_elite BOOLEAN DEFAULT FALSE"))
+            except Exception as inner_e:
+                print(f"Skipping plans.is_elite addition (might exist): {inner_e}")
+                
+            try:
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_elite BOOLEAN DEFAULT FALSE"))
+            except Exception as inner_e:
+                print(f"Skipping users.is_elite addition (might exist): {inner_e}")
+
             conn.commit()
-            print("DB Migration: login_attempts FK constraint check complete.")
+            print("DB Migration: login_attempts FK constraint and missing columns check complete.")
     except Exception as e:
         print(f"DB Migration note (non-critical): {e}")
 
