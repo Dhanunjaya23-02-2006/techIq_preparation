@@ -8,6 +8,9 @@ import pyotp
 import qrcode
 import base64
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Body, Request, status, BackgroundTasks
+import logging
+
+logger = logging.getLogger(__name__)
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlmodel import Session, select, func, delete

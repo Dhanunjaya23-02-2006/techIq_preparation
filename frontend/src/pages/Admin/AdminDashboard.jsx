@@ -209,11 +209,12 @@ export default function AdminDashboard() {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
           {[
             { title: 'Question Bank', desc: 'Manage questions', icon: HiChartPie, route: '/admin/questions' },
             { title: 'Study Materials', desc: 'Study guides', icon: HiDocumentText, route: '/admin/study-material' },
             { title: 'User List', desc: 'Enrolled students', icon: HiUsers, route: '/admin/users' },
+            { title: 'Subscription Plans', desc: 'Plans & Pricing', icon: HiCurrencyRupee, route: '/admin/plans' },
             { title: 'AI PDF Upload', desc: 'Extract questions', icon: HiDatabase, route: '/admin/pdf-upload' }
           ].map((action, i) => (
             <div key={i} className="glass-card" style={{ padding: '20px', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid rgba(255,255,255,0.05)' }}

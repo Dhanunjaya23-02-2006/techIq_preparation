@@ -11,6 +11,7 @@ import {
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { authService } from '../../services/authService';
+import { paymentService } from '../../services/paymentService';
 import TiltCard from '../../components/TiltCard';
 // Remove date-fns import to avoid installation dependency
 
@@ -23,10 +24,28 @@ export default function UserManager() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [selectedPlanType, setSelectedPlanType] = useState('pro'); // 'pro' or 'elite'
+  const [availablePlans, setAvailablePlans] = useState([]);
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
 
   useEffect(() => {
     fetchUsers();
+    fetchPlans();
   }, []);
+
+  const fetchPlans = async () => {
+    try {
+      const resp = await paymentService.getAdminPlans();
+      const planData = Array.isArray(resp.data) ? resp.data : [];
+      setAvailablePlans(planData);
+      // Auto-select first active plan if available
+      if (planData.length > 0) {
+        const firstActive = planData.find(p => p.is_active);
+        if (firstActive) setSelectedPlanId(firstActive.id);
+      }
+    } catch (error) {
+       console.error("Failed to fetch plans for user manager");
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -105,9 +124,12 @@ export default function UserManager() {
     }
     setIsActivating(true);
     try {
-      // Pass the selected plan type to the backend
-      await authService.bulkActivate(selectedUsers, selectedPlanType);
-      toast.success(`Successfully activated ${selectedUsers.length} students to ${selectedPlanType.toUpperCase()} plan`);
+      // Pass the selected plan type and plan ID to the backend
+      const plan = availablePlans.find(p => p.id === selectedPlanId);
+      const planNameFallback = plan ? plan.name : selectedPlanType;
+      
+      await authService.bulkActivate(selectedUsers, selectedPlanType, selectedPlanId);
+      toast.success(`Successfully activated ${selectedUsers.length} students to ${planNameFallback} plan`);
       setSelectedUsers([]);
       fetchUsers();
     } catch (error) {
@@ -399,37 +421,74 @@ export default function UserManager() {
           />
         </div>
         
-        <div style={{ 
-          display: 'flex', 
-          background: 'rgba(15, 23, 42, 0.4)', 
-          padding: '4px', 
-          borderRadius: '14px', 
-          border: '1px solid rgba(255,255,255,0.05)' 
-        }}>
-          {['pro', 'elite'].map((type) => (
-            <button
-              key={type}
-              onClick={() => setSelectedPlanType(type)}
+        {availablePlans.length > 0 ? (
+          <div style={{ 
+            display: 'flex', 
+            background: 'rgba(15, 23, 42, 0.4)', 
+            padding: '4px', 
+            borderRadius: '14px', 
+            border: '1px solid rgba(255,255,255,0.05)',
+            maxHeight: '48px',
+            overflow: 'hidden'
+          }}>
+            <select 
+              value={selectedPlanId || ''} 
+              onChange={(e) => {
+                const id = parseInt(e.target.value);
+                setSelectedPlanId(id);
+                const plan = availablePlans.find(p => p.id === id);
+                if (plan) setSelectedPlanType(plan.is_elite ? 'elite' : 'pro');
+              }}
               style={{
-                padding: '8px 16px',
-                borderRadius: '10px',
+                background: 'transparent',
+                color: '#fff',
                 border: 'none',
-                cursor: 'pointer',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                textTransform: 'uppercase',
-                transition: 'all 0.3s ease',
-                background: selectedPlanType === type 
-                  ? (type === 'elite' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #a855f7, #7e22ce)')
-                  : 'transparent',
-                color: selectedPlanType === type ? '#fff' : '#64748b',
-                boxShadow: selectedPlanType === type ? `0 4px 12px ${type === 'elite' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(168, 85, 247, 0.3)'}` : 'none'
+                padding: '0 10px',
+                fontWeight: 600,
+                outline: 'none',
+                cursor: 'pointer'
               }}
             >
-              {type}
-            </button>
-          ))}
-        </div>
+              {availablePlans.filter(p => p.is_active).map(plan => (
+                <option key={plan.id} value={plan.id} style={{ background: '#0f172a' }}>
+                  {plan.name} (₹{plan.price})
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div style={{ 
+            display: 'flex', 
+            background: 'rgba(15, 23, 42, 0.4)', 
+            padding: '4px', 
+            borderRadius: '14px', 
+            border: '1px solid rgba(255,255,255,0.05)' 
+          }}>
+            {['pro', 'elite'].map((type) => (
+              <button
+                key={type}
+                onClick={() => setSelectedPlanType(type)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  textTransform: 'uppercase',
+                  transition: 'all 0.3s ease',
+                  background: selectedPlanType === type 
+                    ? (type === 'elite' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #a855f7, #7e22ce)')
+                    : 'transparent',
+                  color: selectedPlanType === type ? '#fff' : '#64748b',
+                  boxShadow: selectedPlanType === type ? `0 4px 12px ${type === 'elite' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(168, 85, 247, 0.3)'}` : 'none'
+                }}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+        )}
 
         <motion.button 
           whileHover={{ scale: 1.02, translateY: -2 }}

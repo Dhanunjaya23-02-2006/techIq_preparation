@@ -27,7 +27,12 @@ export const authService = {
   getUsers: () => api.get('/accounts/users'),
   deleteUser: (id) => api.delete(`/accounts/users/${id}`),
   checkAdminExists: () => api.get('/accounts/admin-exists'),
-  bulkActivate: (userIds, planType = 'pro') => api.post('/accounts/users/bulk-activate', { user_ids: userIds, plan_type: planType }),
+  bulkActivate: (userIds, planType = 'pro', planId = null) => 
+    api.post('/accounts/users/bulk-activate', { 
+      user_ids: userIds, 
+      plan_type: planType,
+      plan_id: planId 
+    }),
   bulkDelete: (userIds) => api.post('/accounts/users/bulk-delete', { user_ids: userIds }),
   bulkRegister: (formData) => api.post('/accounts/users/bulk-register', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },

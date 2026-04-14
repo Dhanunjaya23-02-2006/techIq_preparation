@@ -20,6 +20,7 @@ import TestCreator from './pages/Admin/TestCreator';
 import StudyMaterialManager from './pages/Admin/StudyMaterialManager';
 import UserManager from './pages/Admin/UserManager';
 import PYQManager from './pages/Admin/PYQManager';
+import PlanManager from './pages/Admin/PlanManager';
 import Plans from './pages/Pricing/Plans';
 import Landing from './pages/Landing/Landing';
 import Profile from './pages/Auth/Profile';
@@ -109,6 +110,7 @@ function AppRoutes() {
         <Route path="/admin/tests" element={<ProtectedRoute adminOnly><Layout><TestCreator /></Layout></ProtectedRoute>} />
         <Route path="/admin/users" element={<ProtectedRoute adminOnly><Layout><UserManager /></Layout></ProtectedRoute>} />
         <Route path="/admin/pyqs" element={<ProtectedRoute adminOnly><Layout><PYQManager /></Layout></ProtectedRoute>} />
+        <Route path="/admin/plans" element={<ProtectedRoute adminOnly><Layout><PlanManager /></Layout></ProtectedRoute>} />
         <Route path="/admin/study-material" element={<ProtectedRoute adminOnly><Layout><StudyMaterialManager /></Layout></ProtectedRoute>} />
 
         {/* Default / Public View */}
