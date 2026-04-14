@@ -94,33 +94,33 @@ if os.getenv("DISABLE_RATE_LIMIT", "false").lower() != "true":
 app.add_middleware(SecurityHeadersMiddleware)
 
 # 2. Outermost middleware (added last, executed first) — CORS
+# Always include production + dev origins, merged with any env-var origins.
+# This guarantees CORS works even if BACKEND_CORS_ORIGINS env var is missing or
+# mis-formatted on Railway.
+_ALWAYS_ALLOWED_ORIGINS = {
+    "https://tech-iq-preparation.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5188",
+    "http://127.0.0.1:5188",
+}
+
 if settings.BACKEND_CORS_ORIGINS:
-    origins = [str(origin).rstrip("/") for origin in settings.BACKEND_CORS_ORIGINS]
-    print(f"CORS origins: {origins}")
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
-    )
+    _env_origins = {str(origin).rstrip("/") for origin in settings.BACKEND_CORS_ORIGINS}
 else:
-    # Fallback: include both local dev and production origins
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "http://localhost:5188",
-            "http://127.0.0.1:5188",
-            "https://tech-iq-preparation.vercel.app",
-        ],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
-    )
+    _env_origins = set()
+
+_all_origins = list(_ALWAYS_ALLOWED_ORIGINS | _env_origins)
+print(f"CORS allowed origins: {_all_origins}")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_all_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 

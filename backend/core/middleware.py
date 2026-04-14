@@ -1,27 +1,45 @@
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.responses import Response as StarletteResponse
 import time
 import redis.asyncio as redis
 from fastapi.responses import JSONResponse
 from core.config import settings
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "
-            "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: https:; "
-            "connect-src 'self' https://tech-iq-preparation.vercel.app http://localhost:5188; "
-            "frame-ancestors 'none';"
-        )
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        return response
+
+class SecurityHeadersMiddleware:
+    """
+    Pure ASGI middleware for security headers.
+    
+    Unlike BaseHTTPMiddleware, this does NOT interfere with
+    CORSMiddleware's ability to inject CORS headers on error responses.
+    """
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message):
+            if message["type"] == "http.response.start":
+                headers = dict(message.get("headers", []))
+                extra_headers = [
+                    (b"x-content-type-options", b"nosniff"),
+                    (b"x-frame-options", b"DENY"),
+                    (b"x-xss-protection", b"1; mode=block"),
+                    (b"strict-transport-security", b"max-age=31536000; includeSubDomains"),
+                    (b"referrer-policy", b"strict-origin-when-cross-origin"),
+                ]
+                existing = list(message.get("headers", []))
+                existing.extend(extra_headers)
+                message["headers"] = existing
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
+
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, limit: int = 100, window: int = 60):
