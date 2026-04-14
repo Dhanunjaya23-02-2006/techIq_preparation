@@ -88,6 +88,21 @@ app.mount("/media", StaticFiles(directory="media"), name="media")
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
+    
+    # Auto-seed plans if the table is empty
+    try:
+        from sqlmodel import Session, select
+        from models.subscriptions import Plan
+        from core.db import engine
+        
+        with Session(engine) as session:
+            first_plan = session.exec(select(Plan)).first()
+            if not first_plan:
+                print("No plans found in DB. Seeding default plans...")
+                from seed_plans import seed_plans
+                seed_plans()
+    except Exception as e:
+        print(f"Error checking or seeding plans: {e}")
 
 
 # ========================================================================
