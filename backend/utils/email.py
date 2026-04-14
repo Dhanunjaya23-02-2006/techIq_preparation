@@ -15,7 +15,11 @@ def send_otp_email(email: str, otp: str):
         logger.warning(f"LOG FALLBACK - OTP FOR {email}: {otp}")
         return False
 
-    api_url = f"{settings.OTP_SERVICE_URL.rstrip('/')}/api/otp/generate"
+    base_url = settings.OTP_SERVICE_URL.rstrip('/')
+    if "/api/otp/generate" in base_url:
+        api_url = base_url
+    else:
+        api_url = f"{base_url}/api/otp/generate"
     
     payload = {
         "email": email,

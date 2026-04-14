@@ -111,7 +111,12 @@ def register_user(
         logger.info(f"Verifying real-time OTP for {user_in.email} via external service...")
         try:
             with httpx.Client(timeout=10) as client:
-                verify_url = f"{settings.OTP_SERVICE_URL.rstrip('/')}/api/otp/verify"
+                # Get the base URL (remove any trailing paths if user provided the full generate URL)
+                base_url = settings.OTP_SERVICE_URL.rstrip('/')
+                if "/api/otp/generate" in base_url:
+                    base_url = base_url.replace("/api/otp/generate", "")
+                
+                verify_url = f"{base_url.rstrip('/')}/api/otp/verify"
                 resp = client.post(verify_url, json={
                     "email": user_in.email,
                     "otp": user_in.otp
