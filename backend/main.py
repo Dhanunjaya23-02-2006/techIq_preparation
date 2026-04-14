@@ -84,7 +84,7 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_headers=["*"],
     )
 else:
-    # Fallback for development if no origins specified
+    # Fallback: include both local dev and production origins
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[
@@ -92,6 +92,7 @@ else:
             "http://127.0.0.1:5173",
             "http://localhost:5188",
             "http://127.0.0.1:5188",
+            "https://tech-iq-preparation.vercel.app",
         ],
         allow_credentials=True,
         allow_methods=["*"],
