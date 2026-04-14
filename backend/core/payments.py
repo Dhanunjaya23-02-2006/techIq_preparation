@@ -54,6 +54,7 @@ def upgrade_user_subscription(
     )
     
     user.is_premium = True
+    user.is_elite = plan.is_elite
     
     db.add(new_sub)
     db.add(user)

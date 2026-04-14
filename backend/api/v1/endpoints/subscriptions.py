@@ -11,6 +11,7 @@ from models.users import User
 from api.deps import get_current_active_user, get_current_active_superuser
 from datetime import datetime, timedelta
 from core.payments import upgrade_user_subscription
+from schemas.subscriptions import PlanCreate, PlanUpdate
 
 router = APIRouter()
 
@@ -159,3 +160,115 @@ def verify_payment(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Admin Endpoints ---
+
+@router.get("/admin/plans/", response_model=List[Plan])
+def read_plans_admin(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_active_superuser),
+) -> Any:
+    """List all plans including inactive ones (Admin only)."""
+    plans = db.exec(select(Plan).offset(skip).limit(limit)).all()
+    return plans
+
+
+@router.post("/admin/plans/", response_model=Plan)
+def create_plan(
+    *,
+    db: Session = Depends(get_db),
+    plan_in: PlanCreate,
+    current_user: User = Depends(get_current_active_superuser),
+) -> Any:
+    """Create a new plan (Admin only)."""
+    plan = Plan.from_orm(plan_in)
+    db.add(plan)
+    db.commit()
+    db.refresh(plan)
+    return plan
+
+
+@router.put("/admin/plans/{plan_id}", response_model=Plan)
+def update_plan(
+    *,
+    db: Session = Depends(get_db),
+    plan_id: int,
+    plan_in: PlanUpdate,
+    current_user: User = Depends(get_current_active_superuser),
+) -> Any:
+    """Update a plan (Admin only)."""
+    plan = db.get(Plan, plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    plan_data = plan_in.dict(exclude_unset=True)
+    for key, value in plan_data.items():
+        setattr(plan, key, value)
+    
+    db.add(plan)
+    db.commit()
+    db.refresh(plan)
+    return plan
+
+
+@router.delete("/admin/plans/{plan_id}")
+def delete_plan(
+    *,
+    db: Session = Depends(get_db),
+    plan_id: int,
+    current_user: User = Depends(get_current_active_superuser),
+) -> Any:
+    """Delete a plan (Admin only)."""
+    plan = db.get(Plan, plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    # Check if there are active subscriptions for this plan
+    active_subs = db.exec(select(Subscription).where(Subscription.plan_id == plan_id, Subscription.status == "active")).first()
+    if active_subs:
+        raise HTTPException(status_code=400, detail="Cannot delete plan with active subscriptions. Deactivate it instead.")
+    
+    db.delete(plan)
+    db.commit()
+    return {"message": "Plan deleted successfully"}
+
+
+class ManualSubscriptionRequest(BaseModel):
+    user_id: int
+    plan_id: int
+    duration_days: Optional[int] = None
+
+@router.post("/admin/assign-plan/")
+def assign_plan_manually(
+    *,
+    db: Session = Depends(get_db),
+    request: ManualSubscriptionRequest,
+    current_user: User = Depends(get_current_active_superuser),
+) -> Any:
+    """Manually assign a plan to a user (Admin only)."""
+    user = db.get(User, request.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    plan = db.get(Plan, request.plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+        
+    duration = request.duration_days or plan.duration_days
+    
+    # Use the shared utility
+    success = upgrade_user_subscription(
+        db=db,
+        user_id=user.id,
+        plan_id=plan.id,
+        payment_id="manual_admin_action",
+        transaction_id=f"admin_assign_{user.id}_{int(datetime.utcnow().timestamp())}"
+    )
+    
+    if not success:
+         raise HTTPException(status_code=500, detail="Failed to assign plan")
+         
+    return {"message": f"Successfully assigned {plan.name} to {user.email}"}

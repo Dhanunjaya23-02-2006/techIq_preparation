@@ -57,7 +57,8 @@ def seed_plans():
                     "Lifetime Updates",
                     "Elite Badge on Leaderboard"
                 ],
-                is_active=True
+                is_active=True,
+                is_elite=True
             )
         ]
 

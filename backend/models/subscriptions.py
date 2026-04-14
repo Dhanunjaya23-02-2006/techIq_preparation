@@ -15,6 +15,7 @@ class Plan(SQLModel, table=True):
     duration_days: int = Field(default=30)
     features: List[str] = Field(default=[], sa_type=JSON)
     is_active: bool = Field(default=True)
+    is_elite: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

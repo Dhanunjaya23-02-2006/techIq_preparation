@@ -396,7 +396,8 @@ def delete_user(
 
 class BulkActivateRequest(BaseModel):
     user_ids: List[int]
-    plan_type: str = "pro"
+    plan_type: Optional[str] = "pro"
+    plan_id: Optional[int] = None
 
 
 class BulkDeleteRequest(BaseModel):
@@ -410,36 +411,41 @@ def bulk_activate_users(
     current_user: User = Depends(get_current_active_superuser),
 ) -> Any:
     """Activate and upgrade users to premium (Pro or Elite)."""
-    plan_name = "Elite Mastery" if request.plan_type.lower() == "elite" else "Pro Premium"
-    
-    # Try to find the specified plan, or any active plan if not found
-    plan = db.exec(select(Plan).where(Plan.name == plan_name)).first()
-    if not plan:
-        plan = db.exec(select(Plan).where(Plan.is_active == True)).first()
-    
-    if not plan:
-        # Fallback: Create a default plan if none exist
-        plan = Plan(
-            name=plan_name,
-            description=f"Default activated {request.plan_type} plan",
-            price=0.0,
-            duration_days=365,
-            is_active=True
-        )
-        db.add(plan)
-        db.commit()
-        db.refresh(plan)
+    if request.plan_id:
+        plan = db.get(Plan, request.plan_id)
+        if not plan:
+            raise HTTPException(status_code=404, detail=f"Plan ID {request.plan_id} not found")
+    else:
+        plan_name = "Elite Mastery" if request.plan_type.lower() == "elite" else "Pro Premium"
+        # Try to find the specified plan, or any active plan if not found
+        plan = db.exec(select(Plan).where(Plan.name == plan_name)).first()
+        if not plan:
+            # Try a partial match if exact name fails
+            plan = db.exec(select(Plan).where(Plan.name.ilike(f"%{request.plan_type}%"), Plan.is_active == True)).first()
+        
+        if not plan:
+            plan = db.exec(select(Plan).where(Plan.is_active == True)).first()
+        
+        if not plan:
+            # Fallback: Create a default plan if none exist
+            plan = Plan(
+                name=plan_name,
+                description=f"Default activated {request.plan_type} plan",
+                price=0.0,
+                duration_days=365,
+                is_active=True,
+                is_elite=(request.plan_type.lower() == "elite")
+            )
+            db.add(plan)
+            db.commit()
+            db.refresh(plan)
 
     users = db.exec(select(User).where(User.id.in_(request.user_ids))).all()
     for user in users:
         user.is_active = True
         
-        if request.plan_type.lower() == "elite":
-            user.is_elite = True
-            user.is_premium = True
-        else:
-            user.is_premium = True
-            user.is_elite = False
+        user.is_premium = True
+        user.is_elite = plan.is_elite
         
         # Create or update subscription
         existing_sub = db.exec(
@@ -465,7 +471,7 @@ def bulk_activate_users(
         
         db.add(user)
     db.commit()
-    return {"message": f"Successfully activated {len(users)} users to {plan_name}."}
+    return {"message": f"Successfully activated {len(users)} users to {plan.name}."}
 
 
 @router.post("/users/bulk-delete")
