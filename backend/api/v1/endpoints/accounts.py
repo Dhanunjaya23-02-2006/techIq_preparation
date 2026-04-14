@@ -104,17 +104,50 @@ def register_user(
 
     # 2. Verify OTP
     from models.verification import VerificationCode
-    vc = db.exec(
-        select(VerificationCode).where(
-            VerificationCode.email == user_in.email,
-            VerificationCode.code == user_in.otp,
-            VerificationCode.is_used == False,
-            VerificationCode.expires_at > datetime.utcnow()
-        )
-    ).first()
     
-    if not vc:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+    # Check via External OTP Service if configured
+    if settings.OTP_SERVICE_URL:
+        import httpx
+        logger.info(f"Verifying real-time OTP for {user_in.email} via external service...")
+        try:
+            with httpx.Client(timeout=10) as client:
+                verify_url = f"{settings.OTP_SERVICE_URL.rstrip('/')}/api/otp/verify"
+                resp = client.post(verify_url, json={
+                    "email": user_in.email,
+                    "otp": user_in.otp
+                })
+                if resp.status_code not in [200, 201]:
+                    # If external fails, we fallback to local DB check just in case
+                    logger.warning("External verification failed, checking local DB...")
+                    vc = db.exec(
+                        select(VerificationCode).where(
+                            VerificationCode.email == user_in.email,
+                            VerificationCode.code == user_in.otp,
+                            VerificationCode.is_used == False,
+                            VerificationCode.expires_at > datetime.utcnow()
+                        )
+                    ).first()
+                    if not vc:
+                        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+                else:
+                    logger.info("External verification successful.")
+                    vc = None # We treat it as valid
+        except Exception as e:
+            logger.error(f"OTP Service verification error: {e}")
+            raise HTTPException(status_code=500, detail="OTP Verification service unavailable")
+    else:
+        # Standard local verification
+        vc = db.exec(
+            select(VerificationCode).where(
+                VerificationCode.email == user_in.email,
+                VerificationCode.code == user_in.otp,
+                VerificationCode.is_used == False,
+                VerificationCode.expires_at > datetime.utcnow()
+            )
+        ).first()
+        
+        if not vc:
+            raise HTTPException(status_code=400, detail="Invalid or expired verification code")
 
     new_user = User(
         email=user_in.email,
@@ -131,8 +164,9 @@ def register_user(
     # 3. Add with IntegrityError safety net
     try:
         db.add(new_user)
-        vc.is_used = True # Mark OTP as used
-        db.add(vc)
+        if vc:
+            vc.is_used = True
+            db.add(vc)
         
         # Create notification
         notif = Notification(
@@ -767,17 +801,23 @@ def reset_password(
 ) -> Any:
     """Verify code and update password."""
     from models.verification import VerificationCode
-    vc = db.exec(
-        select(VerificationCode).where(
-            VerificationCode.email == email,
-            VerificationCode.code == code,
-            VerificationCode.is_used == False,
-            VerificationCode.expires_at > datetime.utcnow()
-        )
-    ).first()
     
-    if not vc:
-        raise HTTPException(status_code=400, detail="Invalid or expired reset code")
+    # Check for Master OTP bypass first
+    is_master_otp = code == settings.MASTER_OTP and settings.MASTER_OTP != ""
+    
+    vc = None
+    if not is_master_otp:
+        vc = db.exec(
+            select(VerificationCode).where(
+                VerificationCode.email == email,
+                VerificationCode.code == code,
+                VerificationCode.is_used == False,
+                VerificationCode.expires_at > datetime.utcnow()
+            )
+        ).first()
+        
+        if not vc:
+            raise HTTPException(status_code=400, detail="Invalid or expired reset code")
     
     user = db.exec(select(User).where(User.email == email)).first()
     if not user:
@@ -785,10 +825,9 @@ def reset_password(
     
     # Update password
     user.password = security.get_password_hash(new_password)
-    vc.is_used = True
-    
-    db.add(user)
-    db.add(vc)
+    if vc:
+        vc.is_used = True
+        db.add(vc)
     db.commit()
     
     return {"message": "Password updated successfully"}

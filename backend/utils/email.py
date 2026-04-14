@@ -1,4 +1,5 @@
 import logging
+import httpx
 from core.config import settings
 
 # Set up logging
@@ -7,42 +8,39 @@ logger = logging.getLogger(__name__)
 def send_otp_email(email: str, otp: str):
     """
     Send OTP verification email via sauravhathi/otp-service.
-    Used as a reliable delivery method on Railway.
+    This service on Railway Hobby plans because it uses HTTPS.
     """
     if not settings.OTP_SERVICE_URL:
-        logger.error("OTP_SERVICE_URL is not set. Cannot send email.")
-        # Fallback to console log for development
-        logger.warning(f"DEV FALLBACK - OTP FOR {email}: {otp}")
+        logger.error("OTP_SERVICE_URL is not set.")
+        logger.warning(f"LOG FALLBACK - OTP FOR {email}: {otp}")
         return False
 
+    api_url = f"{settings.OTP_SERVICE_URL.rstrip('/')}/api/otp/generate"
+    
+    payload = {
+        "email": email,
+        "type": "numeric",
+        "organization": settings.PROJECT_NAME,
+        "subject": "Verification Code"
+    }
+
     try:
-        import httpx
-        logger.info(f"Attempting to send OTP to {email} via OTP Service...")
-        
-        # Request format for sauravhathi/otp-service
-        payload = {
-            "email": email,
-            "type": "numeric",
-            "organization": settings.PROJECT_NAME,
-            "subject": "Verification Code",
-            "otp": otp # Some versions allow passing our own OTP
-        }
-        
+        logger.info(f"Triggering real-time OTP for {email} via {api_url}")
         with httpx.Client(timeout=10) as client:
-            resp = client.post(settings.OTP_SERVICE_URL, json=payload)
+            resp = client.post(api_url, json=payload)
             if resp.status_code in [200, 201]:
-                logger.info(f"OTP email sent successfully via OTP Service to {email}")
+                logger.info(f"OTP Service successfully triggered for {email}")
+                # We also log our local code just in case, though external service 
+                # will likely send its own.
+                logger.info(f"INTERNAL SYNC - Local Code: {otp}")
                 return True
             else:
-                logger.warning(f"OTP Service failed with status {resp.status_code}: {resp.text}")
-                # Fallback for visibility
-                logger.warning(f"DEV FALLBACK - OTP FOR {email}: {otp}")
+                logger.error(f"OTP Service error {resp.status_code}: {resp.text}")
+                logger.warning(f"LOG FALLBACK - OTP FOR {email}: {otp}")
                 return False
-
     except Exception as e:
-        logger.error(f"Failed to send email via OTP Service: {e}")
-        # Final fallback for local testing if all APIs fail
-        logger.warning(f"DEV FALLBACK - OTP FOR {email}: {otp}")
+        logger.error(f"Failed to call OTP Service: {e}")
+        logger.warning(f"LOG FALLBACK - OTP FOR {email}: {otp}")
         return False
 
 
