@@ -37,13 +37,24 @@ async def log_visit(
         
     # Try to get user from token if present (optional)
     user_id = None
+    display_name = "A guest"
+    
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         try:
-            from api.deps import get_current_user
+            from jose import jwt
+            from core.config import settings
             token = auth_header.split(" ")[1]
-            pass
-        except:
+            payload = jwt.decode(
+                token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+            )
+            user_id = payload.get("sub")
+            if user_id:
+                user = db.get(User, user_id)
+                if user:
+                    display_name = f"User {user.username}"
+        except Exception:
+            # Token might be invalid or expired, just proceed as guest
             pass
 
     record = VisitorRecord(
@@ -57,7 +68,7 @@ async def log_visit(
     notif = Notification(
         type="admin_alert",
         title="New Visit",
-        message=f"A user visited the application from {client_host}."
+        message=f"{display_name} visited the application from {client_host}."
     )
     db.add(notif)
     

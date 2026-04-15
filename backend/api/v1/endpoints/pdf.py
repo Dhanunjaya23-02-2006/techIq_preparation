@@ -79,13 +79,13 @@ Return ONLY the JSON array:"""
 
         try:
             response = client.chat.completions.create(
-                model="openai/gpt-oss-120b",
+                model=settings.AI_MODEL,
                 messages=[
                     {"role": "system", "content": "You are a precise MCQ extractor. Return only valid JSON arrays of question objects. Never include markdown formatting or code blocks."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.1,
-                max_tokens=4096,
+                max_tokens=2048,
             )
 
             result = response.choices[0].message.content.strip()
@@ -291,7 +291,7 @@ async def generate_from_pyq(
     
     try:
         analysis_resp = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model=settings.AI_MODEL,
             messages=[{"role": "user", "content": analysis_prompt}],
             temperature=0.1,
             response_format={"type": "json_object"}
@@ -324,10 +324,10 @@ async def generate_from_pyq(
 
     try:
         gen_resp = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model=settings.AI_MODEL,
             messages=[{"role": "user", "content": generation_prompt}],
             temperature=0.4,
-            max_tokens=4096,
+            max_tokens=3000,
         )
         
         result_text = gen_resp.choices[0].message.content.strip()
@@ -466,43 +466,88 @@ Return ONLY a valid JSON array of objects with these keys:
 
 Return ONLY the JSON array, no markdown, no code blocks:"""
 
+    remaining_count = count
+    all_generated_questions = []
+    
     try:
         client = Groq(api_key=settings.GROQ_API_KEY)
-        response = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
-            messages=[
-                {"role": "system", "content": "You are an expert RRB exam question paper setter. You create questions that match real RRB exam patterns. Return only valid JSON arrays. Never use markdown formatting or code blocks."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.3,
-            max_tokens=8192,
-        )
-
-        result = response.choices[0].message.content.strip()
-
-        # Robust JSON extraction: Find the first '[' and last ']'
-        try:
-            start_idx = result.find('[')
-            end_idx = result.rfind(']')
-            if start_idx != -1 and end_idx != -1:
-                result = result[start_idx : end_idx + 1]
+        
+        # Batch generation to avoid token limits (max 10 questions per call)
+        while remaining_count > 0:
+            current_batch_size = min(remaining_count, 10)
             
-            questions_data = json.loads(result)
-        except json.JSONDecodeError:
-            # Fallback cleanup for common AI artifacts
-            if result.startswith("```"):
-                result = result.split("\n", 1)[1] if "\n" in result else result[3:]
-                if result.endswith("```"):
-                    result = result[:-3]
-                result = result.strip()
-            questions_data = json.loads(result)
+            # Adjust prompt for batching
+            batch_prompt = f"""You are an expert RRB (Railway Recruitment Board) exam question paper setter for Indian Railways.
 
-        if not isinstance(questions_data, list):
-            raise ValueError("AI response is not a valid list of questions")
+Generate exactly {current_batch_size} high-quality MCQ questions for the **{exam_full}** examination.
+
+Subject: **{subject}**
+Topic: **{topic}**
+Difficulty: **{difficulty}** — {difficulty_guidance.get(difficulty, '')}
+{lang_instruction}
+
+CRITICAL REQUIREMENTS:
+1. Questions MUST match the actual pattern and difficulty of recent RRB {exam_type} exams (2022-2025).
+2. Questions should be the type that have a HIGH probability of appearing in upcoming RRB exams.
+3. DO NOT generate any questions related to Probability or Statistics probability topics.
+4. Each question must have exactly 4 options with only ONE correct answer.
+5. Correct answers should be distributed — don't make all answers option A.
+6. Include explanations for each answer.
+7. For Mathematics: Use realistic numerical values seen in actual RRB papers.
+8. For General Awareness: Focus on current affairs, Indian history, geography, polity, economy, and science that are frequently tested in RRB exams.
+9. For Reasoning: Use patterns actually seen in RRB CBT papers.
+10. For General Science: Focus on physics, chemistry, and biology topics from the RRB syllabus.
+
+Return ONLY a valid JSON array of objects with these keys:
+- "text": the question text (clean, no numbering)
+- "option_a": option A text
+- "option_b": option B text
+- "option_c": option C text
+- "option_d": option D text
+- "correct_option": the correct answer letter (A, B, C, or D)
+- "explanation": brief explanation of why the answer is correct
+- "subject": "{subject}"
+- "topic": specific sub-topic within {topic}
+
+Return ONLY the JSON array, no markdown, no code blocks:"""
+
+            response = client.chat.completions.create(
+                model=settings.AI_MODEL,
+                messages=[
+                    {"role": "system", "content": "You are an expert RRB exam question paper setter. You create questions that match real RRB exam patterns. Return only valid JSON arrays. Never use markdown formatting or code blocks."},
+                    {"role": "user", "content": batch_prompt}
+                ],
+                temperature=0.4,
+                max_tokens=4096,
+            )
+
+            result = response.choices[0].message.content.strip()
+
+            # Robust JSON extraction
+            try:
+                start_idx = result.find('[')
+                end_idx = result.rfind(']')
+                if start_idx != -1 and end_idx != -1:
+                    result = result[start_idx : end_idx + 1]
+                
+                questions_data = json.loads(result)
+                if isinstance(questions_data, list):
+                    all_generated_questions.extend(questions_data)
+            except json.JSONDecodeError:
+                # Fallback cleanup
+                if "```" in result:
+                    result = result.split("```")[1]
+                    if result.startswith("json"):
+                        result = result[4:]
+                    questions_data = json.loads(result.strip())
+                    if isinstance(questions_data, list):
+                        all_generated_questions.extend(questions_data)
+            
+            remaining_count -= current_batch_size
 
         # Save to database
         saved_count = 0
-        for q in questions_data:
+        for q in all_generated_questions:
             if not q.get("text") or not q.get("option_a"):
                 continue
 
@@ -537,6 +582,12 @@ Return ONLY the JSON array, no markdown, no code blocks:"""
 
     except Exception as e:
         print(f"ERROR: Question generation failed: {str(e)}")
+        # Check for token limit errors specifically and return a friendly message
+        if "rate_limit_exceeded" in str(e) or "413" in str(e):
+            raise HTTPException(
+                status_code=413, 
+                detail="The request was too large for the AI model. Try reducing the number of questions or simplifying the topic."
+            )
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
 
 
