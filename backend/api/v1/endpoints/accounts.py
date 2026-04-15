@@ -108,60 +108,85 @@ def register_user(
     # 2. Verify OTP
     from models.verification import VerificationCode
     
-    # Check via External OTP Service if configured
-    if settings.OTP_SERVICE_URL:
-        import httpx
-        logger.info(f"Verifying real-time OTP for {user_in.email} via external service...")
-        try:
-            with httpx.Client(timeout=10) as client:
-                # Get the base URL (remove any trailing paths if user provided the full generate URL)
-                base_url = settings.OTP_SERVICE_URL.rstrip('/')
-                if "/api/otp/generate" in base_url:
-                    base_url = base_url.replace("/api/otp/generate", "")
-                
-                verify_url = f"{base_url.rstrip('/')}/api/otp/verify"
-                resp = client.post(verify_url, json={
-                    "email": user_in.email,
-                    "otp": user_in.otp
-                })
-                if resp.status_code not in [200, 201]:
-                    # If external fails, we fallback to local DB check just in case
-                    logger.warning("External verification failed, checking local DB...")
-                    vc = db.exec(
-                        select(VerificationCode).where(
-                            VerificationCode.email == user_in.email,
-                            VerificationCode.code == user_in.otp,
-                            VerificationCode.is_used == False,
-                            VerificationCode.expires_at > datetime.utcnow()
-                        )
-                    ).first()
-                    if not vc:
-                        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
-                else:
-                    logger.info("External verification successful.")
-                    vc = None # We treat it as valid
-        except Exception as e:
-            logger.error(f"OTP Service verification error: {e}")
-            raise HTTPException(status_code=500, detail="OTP Verification service unavailable")
-    else:
-        # Standard local verification
-        vc = db.exec(
-            select(VerificationCode).where(
-                VerificationCode.email == user_in.email,
-                VerificationCode.code == user_in.otp,
-                VerificationCode.is_used == False,
-                VerificationCode.expires_at > datetime.utcnow()
-            )
-        ).first()
-        
-        if not vc:
-            raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+    # Master Bypass for development/testing
+    is_testing_mode = os.getenv("DISABLE_RATE_LIMIT", "false").lower() == "true"
+    is_master_otp = is_testing_mode and user_in.otp == "123456"
+    
+    vc = None
+    if not is_master_otp:
+        # Check via External OTP Service if configured
+        if settings.OTP_SERVICE_URL:
+            import httpx
+            logger.info(f"Verifying real-time OTP for {user_in.email} via external service...")
+            try:
+                with httpx.Client(timeout=10) as client:
+                    # Get the base URL (remove any trailing paths if user provided the full generate URL)
+                    base_url = settings.OTP_SERVICE_URL.rstrip('/')
+                    if "/api/otp/generate" in base_url:
+                        base_url = base_url.replace("/api/otp/generate", "")
+                    
+                    verify_url = f"{base_url.rstrip('/')}/api/otp/verify"
+                    resp = client.post(verify_url, json={
+                        "email": user_in.email,
+                        "otp": user_in.otp
+                    })
+                    if resp.status_code not in [200, 201]:
+                        # If external fails, we fallback to local DB check just in case
+                        logger.warning("External verification failed, checking local DB...")
+                        vc = db.exec(
+                            select(VerificationCode).where(
+                                VerificationCode.email == user_in.email,
+                                VerificationCode.code == user_in.otp,
+                                VerificationCode.is_used == False,
+                                VerificationCode.expires_at > datetime.utcnow()
+                            )
+                        ).first()
+                        if not vc:
+                            raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+                    else:
+                        logger.info("External verification successful.")
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"OTP Service verification error: {e}")
+                # Fallback to local DB check
+                vc = db.exec(
+                    select(VerificationCode).where(
+                        VerificationCode.email == user_in.email,
+                        VerificationCode.code == user_in.otp,
+                        VerificationCode.is_used == False,
+                        VerificationCode.expires_at > datetime.utcnow()
+                    )
+                ).first()
+                if not vc:
+                    raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+        else:
+            # Standard local verification
+            vc = db.exec(
+                select(VerificationCode).where(
+                    VerificationCode.email == user_in.email,
+                    VerificationCode.code == user_in.otp,
+                    VerificationCode.is_used == False,
+                    VerificationCode.expires_at > datetime.utcnow()
+                )
+            ).first()
+            
+            if not vc:
+                raise HTTPException(status_code=400, detail="Invalid or expired verification code")
 
     assigned_role = "student"
+    is_superuser = False
+    is_staff = False
+
     if user_in.role == "admin":
+        # Allow multiple admins if env var is set, otherwise only the first one
+        allow_multiple = os.getenv("ALLOW_MULTIPLE_ADMINS", "false").lower() == "true"
         admin_exists = db.exec(select(User.id).where(User.role == "admin").limit(1)).first() is not None
-        if not admin_exists:
+        
+        if not admin_exists or allow_multiple:
             assigned_role = "admin"
+            is_superuser = True
+            is_staff = True
 
     new_user = User(
         email=user_in.email,
@@ -173,6 +198,8 @@ def register_user(
         role=assigned_role,
         is_active=True,
         is_verified=True, # Mark as verified after successful OTP check
+        is_superuser=is_superuser,
+        is_staff=is_staff
     )
     
     # 3. Add with IntegrityError safety net
@@ -184,10 +211,9 @@ def register_user(
         
         # Create notification
         notif = Notification(
-            user_id=None, # System/Admin notification
             type="admin_alert",
             title="New Registration",
-            message=f"New student {username} has registered."
+            message=f"New {assigned_role} {username} has registered."
         )
         db.add(notif)
         db.commit()

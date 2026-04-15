@@ -34,7 +34,10 @@ class UserUpdate(BaseModel):
 class UserOut(UserBase):
     id: int
     is_premium: bool
+    is_elite: bool = False
     is_active: bool
+    is_superuser: bool = False
+    is_staff: bool = False
     created_at: datetime
     current_plan: Optional[str] = None
     total_test_attempts: int = 0
