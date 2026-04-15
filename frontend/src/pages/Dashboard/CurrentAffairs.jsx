@@ -294,14 +294,14 @@ export default function CurrentAffairs() {
 
     const newsDate = new Date(item.date);
     const newsDateStr = item.date; 
-    const todayStr = getLocalDateStr();
+    const today = new Date();
+    const todayStr = getLocalDateStr(today);
 
     if (activeTab === 'Daily') {
       return newsDateStr === todayStr;
     }
 
     if (activeTab === 'Weekly') {
-      const today = new Date();
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(today.getDate() - 7);
       return newsDate >= sevenDaysAgo;

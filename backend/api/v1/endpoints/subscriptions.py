@@ -32,7 +32,10 @@ def read_plans(
     limit: int = 100,
 ) -> Any:
     plans = db.exec(select(Plan).where(Plan.is_active == True).offset(skip).limit(limit)).all()
-    return plans
+    # Sort plans: Starter (199), Pro (499), Elite (999)
+    # We can sort by price to ensure correct progression
+    sorted_plans = sorted(plans, key=lambda x: x.price)
+    return sorted_plans
 
 
 @router.get("/my/")
