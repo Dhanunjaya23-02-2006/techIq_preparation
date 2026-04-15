@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Railway Exam"
     API_V1_STR: str = "/api/v1"
+    DEBUG: bool = False
     
     # Database configuration
     DB_USER: str = ""
