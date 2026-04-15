@@ -300,43 +300,61 @@ async def generate_from_pyq(
     except Exception:
         analysis = {"subject": "General Awareness", "topics": ["Mixed"], "difficulty": "medium", "language": "en"}
 
-    # 3. Generate New Questions
-    subject = analysis.get("subject", "General Awareness")
-    topics_str = ", ".join(analysis.get("topics", ["Mixed"]))
-    difficulty = analysis.get("difficulty", "medium")
+        remaining_count = count
+        all_generated_questions = []
+        
+        # Batch generation to avoid token limits (max 10 questions per call)
+        while remaining_count > 0:
+            current_batch_size = min(remaining_count, 10)
+            
+            # Adjust prompt for batching
+            batch_generation_prompt = f"""You are an RRB exam paper setter. 
+            Based on the analyzed topics ({topics_str}) and style of a previous year paper, 
+            generate {current_batch_size} BRAND NEW multiple choice questions.
+            
+            Subject: {subject}
+            Difficulty: {difficulty}
+            
+            CRITICAL: 
+            - Questions must be NEW, not direct copies from the source.
+            - Match the complexity and pattern of RRB {exam_type} exams.
+            - Each question must have 4 options and 1 correct answer.
+            - Provide a brief explanation.
+            - Return ONLY a JSON array of question objects.
+            
+            JSON Keys: "text", "option_a", "option_b", "option_c", "option_d", "correct_option" (A/B/C/D), "explanation", "subject", "topic".
+            """
 
-    generation_prompt = f"""You are an RRB exam paper setter. 
-    Based on the analyzed topics ({topics_str}) and style of a previous year paper, 
-    generate {count} BRAND NEW multiple choice questions.
-    
-    Subject: {subject}
-    Difficulty: {difficulty}
-    
-    CRITICAL: 
-    - Questions must be NEW, not direct copies from the source.
-    - Match the complexity and pattern of RRB {exam_type} exams.
-    - Each question must have 4 options and 1 correct answer.
-    - Provide a brief explanation.
-    - Return ONLY a JSON array of question objects.
-    
-    JSON Keys: "text", "option_a", "option_b", "option_c", "option_d", "correct_option" (A/B/C/D), "explanation", "subject", "topic".
-    """
+            gen_resp = client.chat.completions.create(
+                model=settings.AI_MODEL,
+                messages=[{"role": "user", "content": batch_generation_prompt}],
+                temperature=0.4,
+                max_tokens=4096,
+            )
+            
+            result_text = gen_resp.choices[0].message.content.strip()
+            # Clean potential markdown
+            try:
+                start_idx = result_text.find('[')
+                end_idx = result_text.rfind(']')
+                if start_idx != -1 and end_idx != -1:
+                    result_text = result_text[start_idx : end_idx + 1]
+                
+                batch_questions = json.loads(result_text)
+                if isinstance(batch_questions, list):
+                    all_generated_questions.extend(batch_questions)
+            except json.JSONDecodeError:
+                # Fallback cleanup
+                if "```" in result_text:
+                    result_text = result_text.split("```")[1]
+                    if result_text.startswith("json"):
+                        result_text = result_text[4:]
+                    batch_questions = json.loads(result_text.strip())
+                    if isinstance(batch_questions, list):
+                        all_generated_questions.extend(batch_questions)
 
-    try:
-        gen_resp = client.chat.completions.create(
-            model=settings.AI_MODEL,
-            messages=[{"role": "user", "content": generation_prompt}],
-            temperature=0.4,
-            max_tokens=3000,
-        )
-        
-        result_text = gen_resp.choices[0].message.content.strip()
-        # Clean potential markdown
-        if "[" in result_text:
-            result_text = result_text[result_text.find("[") : result_text.rfind("]") + 1]
-        
-        new_questions = json.loads(result_text)
-        
+            remaining_count -= current_batch_size
+
         # 4. Save to DB
         test = MockTest(
             title=f"AI Generated: {title}",
@@ -352,7 +370,7 @@ async def generate_from_pyq(
         db.refresh(test)
 
         saved_count = 0
-        for q in new_questions:
+        for q in all_generated_questions:
             if not q.get("text") or not q.get("option_a"): continue
             
             question = Question(
@@ -391,6 +409,12 @@ async def generate_from_pyq(
         }
 
     except Exception as e:
+        print(f"ERROR: PYQ Generation failed: {str(e)}")
+        if "rate_limit_exceeded" in str(e) or "413" in str(e):
+            raise HTTPException(
+                status_code=413, 
+                detail="Request too large for AI model. Try reducing the number of questions."
+            )
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
 
 
