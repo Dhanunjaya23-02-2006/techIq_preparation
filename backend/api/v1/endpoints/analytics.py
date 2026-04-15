@@ -357,6 +357,7 @@ def get_admin_dashboard(
             "visitor_stats": {
                 "total_visits": total_visits,
                 "today_visits": today_visits,
+                "conversion_rate": round((new_students_today / today_visits * 100), 2) if today_visits > 0 else 0
             },
             "subscription_stats": {
                 "active_subscriptions": active_subscriptions,
