@@ -168,92 +168,90 @@ export default function PlanManager() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '24px' }}>
           {plans.map((plan) => (
-            <TiltCard key={plan.id}>
-              <motion.div 
-                variants={itemVariants}
-                className="glass-card"
-                style={{ 
-                  padding: '32px', 
-                  height: '100%', 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  position: 'relative',
-                  border: plan.is_active ? '1px solid rgba(255,153,51,0.2)' : '1px solid rgba(255,255,255,0.05)',
-                  opacity: plan.is_active ? 1 : 0.6
-                }}
-              >
-                {!plan.is_active && (
-                  <div style={{ 
-                    position: 'absolute', top: '15px', right: '15px', 
-                    background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444',
-                    padding: '4px 8px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800
-                  }}>INACTIVE</div>
+            <TiltCard 
+              key={plan.id} 
+              variants={itemVariants}
+              style={{ 
+                padding: '32px', 
+                height: '100%', 
+                display: 'flex', 
+                flexDirection: 'column',
+                position: 'relative',
+                border: plan.is_active ? '1px solid rgba(255,153,51,0.2)' : '1px solid rgba(255,255,255,0.05)',
+                opacity: plan.is_active ? 1 : 0.6
+              }}
+            >
+              {!plan.is_active && (
+                <div style={{ 
+                  position: 'absolute', top: '15px', right: '15px', 
+                  background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444',
+                  padding: '4px 8px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800
+                }}>INACTIVE</div>
+              )}
+              
+              {plan.is_elite && (
+                <div style={{ 
+                  position: 'absolute', top: '15px', left: '15px', 
+                  background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b',
+                  padding: '4px 8px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800,
+                  display: 'flex', alignItems: 'center', gap: '4px'
+                }}>
+                  <HiStar size={12} /> ELITE
+                </div>
+              )}
+
+              <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: '10px 0' }}>{plan.name}</h2>
+                {plan.badge && (
+                  <span style={{ 
+                    background: 'var(--saffron)', color: '#000', 
+                    fontSize: '0.7rem', fontWeight: 900, padding: '2px 8px', 
+                    borderRadius: '4px', textTransform: 'uppercase' 
+                  }}>{plan.badge}</span>
                 )}
-                
-                {plan.is_elite && (
-                  <div style={{ 
-                    position: 'absolute', top: '15px', left: '15px', 
-                    background: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b',
-                    padding: '4px 8px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800,
-                    display: 'flex', alignItems: 'center', gap: '4px'
-                  }}>
-                    <HiStar size={12} /> ELITE
-                  </div>
-                )}
+              </div>
 
-                <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-                  <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: '10px 0' }}>{plan.name}</h2>
-                  {plan.badge && (
-                    <span style={{ 
-                      background: 'var(--saffron)', color: '#000', 
-                      fontSize: '0.7rem', fontWeight: 900, padding: '2px 8px', 
-                      borderRadius: '4px', textTransform: 'uppercase' 
-                    }}>{plan.badge}</span>
-                  )}
-                </div>
+              <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                <span style={{ fontSize: '2.5rem', fontWeight: 900 }}>₹{plan.price}</span>
+                <span style={{ color: '#94a3b8', fontSize: '1rem' }}> / {plan.duration_days} days</span>
+              </div>
 
-                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-                  <span style={{ fontSize: '2.5rem', fontWeight: 900 }}>₹{plan.price}</span>
-                  <span style={{ color: '#94a3b8', fontSize: '1rem' }}> / {plan.duration_days} days</span>
-                </div>
+              <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '24px', textAlign: 'center' }}>
+                {plan.description}
+              </p>
 
-                <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '24px', textAlign: 'center' }}>
-                  {plan.description}
-                </p>
+              <div style={{ flexGrow: 1, marginBottom: '24px' }}>
+                <h4 style={{ fontSize: '0.9rem', color: '#fff', marginBottom: '12px', fontWeight: 700 }}>Features:</h4>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {plan.features?.map((f, idx) => (
+                    <li key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: '#cbd5e1' }}>
+                      <HiCheck size={16} color="var(--saffron)" /> {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-                <div style={{ flexGrow: 1, marginBottom: '24px' }}>
-                  <h4 style={{ fontSize: '0.9rem', color: '#fff', marginBottom: '12px', fontWeight: 700 }}>Features:</h4>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {plan.features?.map((f, idx) => (
-                      <li key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: '#cbd5e1' }}>
-                        <HiCheck size={16} color="var(--saffron)" /> {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', marginTop: 'auto' }}>
-                  <button 
-                    onClick={() => handleOpenModal(plan)}
-                    style={{ 
-                      flex: 1, padding: '10px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)',
-                      background: 'rgba(255,255,255,0.05)', color: '#fff', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                    }}
-                  >
-                    <HiPencil size={18} /> Edit
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(plan.id, plan.name)}
-                    style={{ 
-                      padding: '10px', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.2)',
-                      background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', cursor: 'pointer'
-                    }}
-                  >
-                    <HiTrash size={18} />
-                  </button>
-                </div>
-              </motion.div>
+              <div style={{ display: 'flex', gap: '12px', marginTop: 'auto' }}>
+                <button 
+                  onClick={() => handleOpenModal(plan)}
+                  style={{ 
+                    flex: 1, padding: '10px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.05)', color: '#fff', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                  }}
+                >
+                  <HiPencil size={18} /> Edit
+                </button>
+                <button 
+                  onClick={() => handleDelete(plan.id, plan.name)}
+                  style={{ 
+                    padding: '10px', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.2)',
+                    background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', cursor: 'pointer'
+                  }}
+                >
+                  <HiTrash size={18} />
+                </button>
+              </div>
             </TiltCard>
           ))}
         </div>
