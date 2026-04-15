@@ -68,7 +68,7 @@ async def log_visit(
     notif = Notification(
         type="admin_alert",
         title="New Visit",
-        message=f"{display_name} visited the application from {client_host}."
+        message=f"{display_name} visited the application."
     )
     db.add(notif)
     

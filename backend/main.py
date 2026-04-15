@@ -11,6 +11,7 @@ from api.v1.api import api_router
 from core.config import settings
 from core.db import engine
 from core.middleware import SecurityHeadersMiddleware, RateLimitMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 # Import all models so SQLModel knows about them
 from models import users, questions, tests, content, subscriptions, pdf, notifications, analytics, verification  # noqa
@@ -49,7 +50,27 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# Custom exception handler to fix UnicodeDecodeError on validation errors with binary data
+# ========================================================================
+# CORS configuration
+# ========================================================================
+_ALWAYS_ALLOWED_ORIGINS = {
+    "https://tech-iq-preparation.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5188",
+    "http://127.0.0.1:5188",
+}
+
+if settings.BACKEND_CORS_ORIGINS:
+    _env_origins = {str(origin).rstrip("/") for origin in settings.BACKEND_CORS_ORIGINS}
+else:
+    _env_origins = set()
+
+_all_origins = list(_ALWAYS_ALLOWED_ORIGINS | _env_origins)
+
+# ========================================================================
+# Exception Handlers
+# ========================================================================
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """
@@ -57,9 +78,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     (like multipart/form-data with images) is involved.
     """
     errors = exc.errors()
-    
-    # Sanitize errors to ensure no raw bytes are passed to jsonable_encoder
-    # primarily targeting the 'input' field in Pydantic V2 errors
     sanitized_errors = []
     for error in errors:
         safe_error = dict(error)
@@ -68,7 +86,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
                 # Try to decode if it might be text
                 safe_error["input"].decode('utf-8')
             except UnicodeDecodeError:
-                # If it's binary, replace with a placeholder or truncated hex
                 safe_error["input"] = f"<binary data: {len(safe_error['input'])} bytes>"
         sanitized_errors.append(safe_error)
         
@@ -76,6 +93,49 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         status_code=422,
         content=jsonable_encoder({"detail": sanitized_errors}),
     )
+
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """
+    Ensure CORS headers are appended to all HTTP exceptions (like 401 Unauthorized).
+    """
+    origin = request.headers.get("origin")
+    headers = dict(exc.headers) if exc.headers else {}
+    
+    if origin and (origin in _ALWAYS_ALLOWED_ORIGINS or origin in _env_origins or "*" in _all_origins):
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+        headers["Access-Control-Allow-Methods"] = "*"
+        headers["Access-Control-Allow-Headers"] = "*"
+        
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=headers
+    )
+
+# ========================================================================
+# Middleware setup
+# IMPORTANT: FastAPI/Starlette executes middleware in REVERSE order of addition.
+# The LAST middleware added is the FIRST to execute (outermost wrapper).
+# CORSMiddleware MUST be the LAST added so it wraps everything.
+# ========================================================================
+
+# 1. Inner middleware (added first)
+if os.getenv("DISABLE_RATE_LIMIT", "false").lower() != "true" and not settings.DEBUG:
+    app.add_middleware(RateLimitMiddleware, limit=200, window=60)
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+# 2. Outermost middleware (added last) - CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_all_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
 
 # Ensure media directories exist
 os.makedirs("media/avatars", exist_ok=True)
@@ -120,50 +180,6 @@ def on_startup():
         import time
         time.sleep(2)
 
-
-# ========================================================================
-# Middleware setup
-# IMPORTANT: FastAPI/Starlette executes middleware in REVERSE order of addition.
-# The LAST middleware added is the FIRST to execute (outermost wrapper).
-# CORSMiddleware MUST be the LAST added so it wraps everything and
-# always injects CORS headers, even on error/exception responses.
-# ========================================================================
-
-# 1. Inner middleware (added first, executed last)
-# Only add rate limiting if not explicitly disabled (for performance testing)
-if os.getenv("DISABLE_RATE_LIMIT", "false").lower() != "true":
-    app.add_middleware(RateLimitMiddleware, limit=100, window=60)
-
-app.add_middleware(SecurityHeadersMiddleware)
-
-# 2. Outermost middleware (added last, executed first) — CORS
-# Always include production + dev origins, merged with any env-var origins.
-# This guarantees CORS works even if BACKEND_CORS_ORIGINS env var is missing or
-# mis-formatted on Railway.
-_ALWAYS_ALLOWED_ORIGINS = {
-    "https://tech-iq-preparation.vercel.app",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5188",
-    "http://127.0.0.1:5188",
-}
-
-if settings.BACKEND_CORS_ORIGINS:
-    _env_origins = {str(origin).rstrip("/") for origin in settings.BACKEND_CORS_ORIGINS}
-else:
-    _env_origins = set()
-
-_all_origins = list(_ALWAYS_ALLOWED_ORIGINS | _env_origins)
-print(f"CORS allowed origins: {_all_origins}")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_all_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-)
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 

@@ -213,7 +213,7 @@ def register_user(
         notif = Notification(
             type="admin_alert",
             title="New Registration",
-            message=f"New {assigned_role} {username} has registered."
+            message=f"New {assigned_role} {username} ({user_in.email}) has registered."
         )
         db.add(notif)
         db.commit()
@@ -604,7 +604,7 @@ async def bulk_register_users(
             notif = Notification(
                 type="admin_alert",
                 title="New Registration",
-                message=f"User {username} has successfully registered via bulk upload."
+                message=f"User {username} ({email}) has successfully registered via bulk upload."
             )
             db.add(notif)
             db.commit()

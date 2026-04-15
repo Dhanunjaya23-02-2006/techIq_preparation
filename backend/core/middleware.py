@@ -41,9 +41,9 @@ class SecurityHeadersMiddleware:
         await self.app(scope, receive, send_with_headers)
 
 
-class RateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, limit: int = 100, window: int = 60):
-        super().__init__(app)
+class RateLimitMiddleware:
+    def __init__(self, app: ASGIApp, limit: int = 100, window: int = 60):
+        self.app = app
         self.limit = limit
         self.window = window
         self.redis_client = None
@@ -59,26 +59,35 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 print(f"RateLimitMiddleware Init Error: {e}")
 
-    async def dispatch(self, request: Request, call_next):
-        client_ip = request.client.host
-        key = f"rate_limit:{client_ip}"
-        
-        if not self.redis_client:
-            return await call_next(request)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or scope["method"] == "OPTIONS":
+            await self.app(scope, receive, send)
+            return
+
+        # Attempt to get client IP from scope
+        client_ip = "unknown"
+        for host, port in [scope.get("client", [])]:
+            client_ip = host
+            break
             
+        if not self.redis_client:
+            await self.app(scope, receive, send)
+            return
+
+        key = f"rate_limit:{client_ip}"
         try:
-            # Fixed window rate limiting
             current_count = await self.redis_client.incr(key)
             if current_count == 1:
                 await self.redis_client.expire(key, self.window)
             
             if current_count > self.limit:
-                return JSONResponse(
+                response = JSONResponse(
                     status_code=429,
                     content={"detail": "Too many requests. Please try again later."}
                 )
+                await response(scope, receive, send)
+                return
         except Exception as e:
-            # Fallback: Allow request if Redis is unavailable, but log the error
             print(f"RateLimitMiddleware Error: {e}")
             
-        return await call_next(request)
+        await self.app(scope, receive, send)
