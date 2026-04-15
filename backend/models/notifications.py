@@ -16,7 +16,7 @@ class Notification(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "title": "New Mock Test Available",
                 "message": "RRB NTPC Grand Test 2026 is now live!",
