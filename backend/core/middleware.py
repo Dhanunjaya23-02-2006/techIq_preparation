@@ -53,8 +53,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 self.redis_client = redis.from_url(
                     settings.REDIS_URL, 
                     decode_responses=True,
-                    socket_connect_timeout=2,
-                    socket_timeout=2
+                    socket_connect_timeout=0.5,
+                    socket_timeout=0.5
                 )
             except Exception as e:
                 print(f"RateLimitMiddleware Init Error: {e}")

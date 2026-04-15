@@ -5,8 +5,8 @@ from core.config import settings
 engine = create_engine(
     settings.SQLALCHEMY_DATABASE_URL, 
     echo=False, 
-    pool_size=20, 
-    max_overflow=10,
+    pool_size=10, 
+    max_overflow=5,
     pool_pre_ping=True
 )
 
