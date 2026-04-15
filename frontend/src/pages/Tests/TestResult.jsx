@@ -35,7 +35,11 @@ export default function TestResult() {
 
   if (!state) { navigate('/tests'); return null; }
 
-  const accuracy = state.total_questions > 0 ? ((state.correct / state.total_questions) * 100).toFixed(1) : 0;
+  const correct = state.correct || 0;
+  const wrong = state.wrong || 0;
+  const score = state.score || 0;
+  const total_questions = state.total_questions || (correct + wrong + (state.unanswered || 0)) || 1;
+  const accuracy = ((correct / total_questions) * 100).toFixed(1);
   const isHighScorer = parseFloat(accuracy) > 80;
 
   return (
@@ -83,7 +87,7 @@ export default function TestResult() {
             background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
           }}>
-            <span style={{ fontSize: '3rem', fontWeight: 900 }} className="gradient-text">{state.score}</span>
+            <span style={{ fontSize: '3rem', fontWeight: 900 }} className="gradient-text">{score}</span>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Score</span>
           </div>
         </div>
@@ -91,12 +95,12 @@ export default function TestResult() {
         <div className="test-result-stats-grid">
           <div className="glass-card" style={{ padding: '20px', background: 'rgba(16, 185, 129, 0.05)', border: 'none' }}>
             <HiCheckCircle size={24} color="#10b981" style={{ marginBottom: '8px' }} />
-            <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fff' }}>{state.correct}</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fff' }}>{correct}</p>
             <p style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 700 }}>Correct</p>
           </div>
           <div className="glass-card" style={{ padding: '20px', background: 'rgba(239, 68, 68, 0.05)', border: 'none' }}>
             <HiXCircle size={24} color="#ef4444" style={{ marginBottom: '8px' }} />
-            <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fff' }}>{state.wrong}</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fff' }}>{wrong}</p>
             <p style={{ color: '#ef4444', fontSize: '0.8rem', fontWeight: 700 }}>Wrong</p>
           </div>
           <div className="glass-card" style={{ padding: '20px', background: 'rgba(59, 130, 246, 0.05)', border: 'none' }}>

@@ -54,7 +54,7 @@ export default function Analytics() {
   // Prepare radar data
   const radarData = stats.subject_stats?.map(s => ({
     subject: s.subject,
-    accuracy: Math.round((s.correct / s.total) * 100),
+    accuracy: s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0,
     fullMark: 100
   })) || [];
 

@@ -97,12 +97,12 @@ def get_performance_stats(
     # Format recent attempts for the battle log
     recent_attempts_formatted = [
         {
-            "id": a.TestAttempt.id,
-            "score": a.TestAttempt.score,
-            "total_questions": a.TestAttempt.total_questions,
-            "submitted_at": a.TestAttempt.submitted_at,
-            "test_title": a.title
-        } for a in attempts_query
+            "id": row[0].id,
+            "score": row[0].score,
+            "total_questions": row[0].total_questions,
+            "submitted_at": row[0].submitted_at,
+            "test_title": row[1]
+        } for row in attempts_query
     ]
     
     # Fetch all attempts for global stats and trends

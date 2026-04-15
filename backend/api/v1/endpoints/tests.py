@@ -342,7 +342,7 @@ def submit_test(
     
     return {
         "success": True,
-        "data": attempt
+        "data": TestAttemptOut.model_validate(attempt)
     }
 
 
