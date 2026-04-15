@@ -15,6 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 # Import all models so SQLModel knows about them
 from models import users, questions, tests, content, subscriptions, pdf, notifications, analytics, verification  # noqa
+from models.notifications import Notification
 
 
 def create_db_and_tables():
@@ -69,8 +70,35 @@ else:
 _all_origins = list(_ALWAYS_ALLOWED_ORIGINS | _env_origins)
 
 # ========================================================================
-# Exception Handlers
+# CORS Helper & Exception Handlers
 # ========================================================================
+
+def add_cors_headers(request: Request, response: JSONResponse):
+    """
+    Helper to manually inject CORS headers into responses from exception handlers.
+    FastAPI's CORSMiddleware sometimes doesn't catch these depending on where they are raised.
+    """
+    origin = request.headers.get("origin")
+    if not origin:
+        return response
+        
+    # Check if origin is allowed
+    is_allowed = (
+        origin in _ALWAYS_ALLOWED_ORIGINS or 
+        origin in _env_origins or 
+        "*" in _all_origins or
+        "*" in _env_origins
+    )
+    
+    if is_allowed:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+        response.headers["Access-Control-Expose-Headers"] = "*"
+    
+    return response
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """
@@ -89,30 +117,38 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
                 safe_error["input"] = f"<binary data: {len(safe_error['input'])} bytes>"
         sanitized_errors.append(safe_error)
         
-    return JSONResponse(
+    response = JSONResponse(
         status_code=422,
         content=jsonable_encoder({"detail": sanitized_errors}),
     )
+    return add_cors_headers(request, response)
 
 @app.exception_handler(StarletteHTTPException)
 async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
     """
     Ensure CORS headers are appended to all HTTP exceptions (like 401 Unauthorized).
     """
-    origin = request.headers.get("origin")
-    headers = dict(exc.headers) if exc.headers else {}
-    
-    if origin and (origin in _ALWAYS_ALLOWED_ORIGINS or origin in _env_origins or "*" in _all_origins):
-        headers["Access-Control-Allow-Origin"] = origin
-        headers["Access-Control-Allow-Credentials"] = "true"
-        headers["Access-Control-Allow-Methods"] = "*"
-        headers["Access-Control-Allow-Headers"] = "*"
-        
-    return JSONResponse(
+    response = JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail},
-        headers=headers
+        headers=getattr(exc, "headers", None)
     )
+    return add_cors_headers(request, response)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Catch-all for internal server errors (500).
+    Adds CORS headers so the frontend sees the 500 error instead of a 'CORS blocked' error.
+    """
+    import logging
+    logging.error(f"Global Exception caught: {str(exc)}", exc_info=True)
+    
+    response = JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "msg": str(exc) if settings.DEBUG else "Check server logs"}
+    )
+    return add_cors_headers(request, response)
 
 # ========================================================================
 # Middleware setup

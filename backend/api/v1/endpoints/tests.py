@@ -12,6 +12,7 @@ from models.users import User
 from schemas.tests import MockTestOut, MockTestCreate, MockTestUpdate, SubmitTestIn, TestAttemptOut, AttemptDetailOut, QuestionReviewOut
 from schemas.questions import QuestionTestOut
 from api.deps import get_current_active_user, get_current_active_superuser
+from models.notifications import Notification
 
 router = APIRouter()
 

@@ -64,11 +64,11 @@ class RateLimitMiddleware:
             await self.app(scope, receive, send)
             return
 
-        # Attempt to get client IP from scope
+        # Attempt to get client IP from scope safely
         client_ip = "unknown"
-        for host, port in [scope.get("client", [])]:
-            client_ip = host
-            break
+        client = scope.get("client")
+        if client and isinstance(client, (list, tuple)) and len(client) >= 2:
+            client_ip = client[0]
             
         if not self.redis_client:
             await self.app(scope, receive, send)
