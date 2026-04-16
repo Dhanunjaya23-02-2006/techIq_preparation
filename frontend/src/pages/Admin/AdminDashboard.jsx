@@ -9,6 +9,8 @@ import { getAdminStats } from '../../services/analyticsService';
 import notificationService from '../../services/notificationService';
 import useAuthStore from '../../store/authStore';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { formatError } from '../../utils/error';
+
 
 import { useNavigate } from 'react-router-dom';
 
@@ -75,8 +77,9 @@ export default function AdminDashboard() {
         setStatsData(resp.data);
       }
     } catch (error) {
-      toast.error("Failed to load dashboard statistics");
+      toast.error(formatError(error));
     } finally {
+
       setLoading(false);
     }
   };

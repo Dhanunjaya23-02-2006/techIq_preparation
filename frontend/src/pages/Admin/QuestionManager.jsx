@@ -3,6 +3,7 @@ import { HiPencil, HiTrash, HiCheck, HiX, HiSearch, HiPlus, HiFilter } from 'rea
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { questionService } from '../../services/questionService';
+import { formatError } from '../../utils/error';
 
 export default function QuestionManager() {
   const [questions, setQuestions] = useState([]);
@@ -35,7 +36,7 @@ export default function QuestionManager() {
         setQuestions(data.data || []);
       }
     } catch (err) {
-      toast.error('Failed to load questions');
+      toast.error(formatError(err));
     }
     setLoading(false);
   };
@@ -65,12 +66,7 @@ export default function QuestionManager() {
       resetForm();
       loadQuestions();
     } catch (err) {
-      const backendError = err.response?.data;
-      let errorMsg = 'Save failed';
-      if (typeof backendError === 'object' && backendError !== null) {
-        errorMsg = backendError.detail || backendError.message || Object.values(backendError).flat()[0] || 'Save failed';
-      }
-      toast.error(errorMsg);
+      toast.error(formatError(err));
     }
   };
 

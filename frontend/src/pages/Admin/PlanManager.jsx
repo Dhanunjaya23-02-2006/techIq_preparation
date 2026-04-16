@@ -12,6 +12,7 @@ import {
   HiClock,
   HiShieldCheck
 } from 'react-icons/hi';
+import { formatError } from '../../utils/error';
 import toast from 'react-hot-toast';
 import { paymentService } from '../../services/paymentService';
 import TiltCard from '../../components/TiltCard';
@@ -44,7 +45,7 @@ export default function PlanManager() {
       const resp = await paymentService.getAdminPlans();
       setPlans(Array.isArray(resp.data) ? resp.data : []);
     } catch (error) {
-      toast.error("Failed to load plans");
+      toast.error(formatError(error));
     } finally {
       setLoading(false);
     }
@@ -116,7 +117,7 @@ export default function PlanManager() {
       fetchPlans();
       handleCloseModal();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to save plan");
+      toast.error(formatError(error));
     }
   };
 
@@ -127,8 +128,9 @@ export default function PlanManager() {
         toast.success("Plan deleted");
         fetchPlans();
       } catch (error) {
-        toast.error(error.response?.data?.detail || "Failed to delete plan");
+        toast.error(formatError(error));
       }
+
     }
   };
 

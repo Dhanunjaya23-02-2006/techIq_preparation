@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { formatError } from '../utils/error';
+
 
 const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -114,17 +116,7 @@ api.interceptors.response.use(
     
     // Some routes might handle errors themselves, but a global one is a good safety net
     if (status && status !== 401 && status !== 404) {
-      let message = error.response?.data?.detail || error.response?.data?.message || 'Server Error. Please try again.';
-      
-      // Fix React Error #31: Objects are not valid as a React child
-      // FastAPI 422 errors return an array of objects in 'detail'
-      if (typeof message === 'object') {
-        if (Array.isArray(message)) {
-          message = message.map(err => `${err.loc.join('.')}: ${err.msg}`).join(', ');
-        } else {
-          message = JSON.stringify(message);
-        }
-      }
+      const message = formatError(error);
       
       // We use a dynamic import for toast to avoid circular dependency if needed
       import('react-hot-toast').then(({ toast }) => {

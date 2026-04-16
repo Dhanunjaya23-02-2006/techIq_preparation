@@ -3,6 +3,8 @@ import { HiUpload, HiTrash, HiDownload, HiPlus, HiRefresh, HiClipboardList, HiX 
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { formatError } from '../../utils/error';
+
 
 export default function PYQManager() {
   const [pyqs, setPyqs] = useState([]);
@@ -112,8 +114,9 @@ export default function PYQManager() {
       setPdfFile(null);
       fetchPYQs();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to generate questions');
+      toast.error(formatError(err));
     }
+
     setGenerating(false);
   };
 

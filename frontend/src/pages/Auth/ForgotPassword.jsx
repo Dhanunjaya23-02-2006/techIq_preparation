@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HiMail, HiLockClosed, HiEye, HiEyeOff, HiArrowLeft, HiCheckCircle } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { authService } from '../../services/authService';
+import { formatError } from '../../utils/error';
 
 export default function ForgotPassword() {
   const [step, setStep] = useState(1); // 1: Email, 2: OTP & New Password
@@ -23,8 +24,9 @@ export default function ForgotPassword() {
       toast.success(res.data.message || 'Verification code sent!');
       setStep(2);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to send verification code');
+      toast.error(formatError(error));
     } finally {
+
       setIsLoading(false);
     }
   };
@@ -41,8 +43,9 @@ export default function ForgotPassword() {
       toast.success(res.data.message || 'Password reset successfully!');
       setTimeout(() => navigate('/login'), 2000);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to reset password');
+      toast.error(formatError(error));
     } finally {
+
       setIsLoading(false);
     }
   };

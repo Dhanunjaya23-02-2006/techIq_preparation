@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { authService } from '../services/authService';
+import { formatError } from '../utils/error';
+
 
 const getInitialAuth = () => {
   const token = localStorage.getItem('access_token');
@@ -50,8 +52,9 @@ const useAuthStore = create((set) => ({
       set({ isLoading: false, isProfileLoading: false });
       return {
         success: false,
-        message: error.response?.data?.detail || 'Login failed.',
+        message: formatError(error),
       };
+
     }
   },
 
@@ -66,8 +69,9 @@ const useAuthStore = create((set) => ({
       const errors = error.response?.data;
       return {
         success: false,
-        message: typeof errors === 'string' ? errors : (errors?.detail || JSON.stringify(errors)),
+        message: formatError(error),
       };
+
     }
   },
 
@@ -98,8 +102,9 @@ const useAuthStore = create((set) => ({
       set({ isLoading: false });
       return {
         success: false,
-        message: error.response?.data?.detail || 'Update failed.',
+        message: formatError(error),
       };
+
     }
   },
 
@@ -135,8 +140,9 @@ const useAuthStore = create((set) => ({
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.detail || 'Verification failed.',
+        message: formatError(error),
       };
+
     }
   },
 
@@ -147,8 +153,9 @@ const useAuthStore = create((set) => ({
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.detail || 'Failed to disable MFA.',
+        message: formatError(error),
       };
+
     }
   },
 }));

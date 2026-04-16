@@ -9,6 +9,7 @@ import {
   HiLightningBolt,
   HiStar
 } from 'react-icons/hi';
+import { formatError } from '../../utils/error';
 import toast from 'react-hot-toast';
 import { authService } from '../../services/authService';
 import { paymentService } from '../../services/paymentService';
@@ -208,8 +209,9 @@ export default function UserManager() {
       }
       fetchUsers();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to bulk register users");
+      toast.error(formatError(error));
     } finally {
+
       setIsRegistering(false);
       e.target.value = null; // Reset input
     }

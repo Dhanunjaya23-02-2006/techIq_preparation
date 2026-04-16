@@ -5,6 +5,8 @@ import { HiUser, HiMail, HiLockClosed, HiPhone, HiArrowLeft } from 'react-icons/
 import toast from 'react-hot-toast';
 import { authService } from '../../services/authService';
 import useAuthStore from '../../store/authStore';
+import { formatError } from '../../utils/error';
+
 
 export default function Register() {
   const [form, setForm] = useState({
@@ -55,8 +57,9 @@ export default function Register() {
       setResendTimer(60);
       toast.success('Verification code sent to your email');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to send verification code');
+      toast.error(formatError(err));
     } finally {
+
       setIsSendingOtp(false);
     }
   };
@@ -69,8 +72,9 @@ export default function Register() {
       setResendTimer(60);
       toast.success('New verification code sent');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to resend code');
+      toast.error(formatError(err));
     } finally {
+
       setIsSendingOtp(false);
     }
   };
