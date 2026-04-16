@@ -173,7 +173,7 @@ export default function Plans() {
   React.useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const res = await api.get('/subscriptions/plans/');
+        const res = await paymentService.getPlans();
         const planDetails = {
           'Starter': { ui_slug: 'recruit', icon: '🚀', highlight: false, description: 'Perfect for basic training and fundamental concept clearance.' },
           'Pro': { ui_slug: 'veteran', icon: '⭐', highlight: true, description: 'Become a battle-hardened aspirant with full test access.', badge: 'POPULAR' },

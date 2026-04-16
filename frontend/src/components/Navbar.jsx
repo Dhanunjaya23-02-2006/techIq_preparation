@@ -4,6 +4,7 @@ import { HiBell, HiSearch, HiUser, HiClock, HiCheckCircle, HiExternalLink, HiCog
 import useAuthStore from '../store/authStore';
 import useUIStore from '../store/uiStore';
 import notificationService from '../services/notificationService';
+import { getMediaUrl } from '../utils/url';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Navbar({ onMenuClick }) {
@@ -298,7 +299,7 @@ export default function Navbar({ onMenuClick }) {
               border: user?.avatar ? '2px solid var(--saffron)' : 'none'
             }}>
               {user?.avatar ? (
-                <img src={user.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={getMediaUrl(user.avatar)} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 user?.first_name?.[0] || user?.username?.[0] || <HiUser />
               )}

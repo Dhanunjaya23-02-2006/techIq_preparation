@@ -1,6 +1,8 @@
 import api from './api';
 
 export const paymentService = {
+  getPlans: () => api.get('/subscriptions/plans/'),
+  getMySubscriptions: () => api.get('/subscriptions/my/'),
   checkout: (planId, paymentType = 'full') => 
     api.post('/subscriptions/checkout/', { plan_id: planId, payment_type: paymentType }),
   verifyPayment: (razorpayData) => 

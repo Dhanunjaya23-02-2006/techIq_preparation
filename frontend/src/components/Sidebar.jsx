@@ -4,6 +4,7 @@ import {
   HiUserGroup, HiLogout, HiClipboardList,
   HiBookOpen, HiNewspaper, HiStar, HiCurrencyRupee, HiClock, HiX
 } from 'react-icons/hi';
+import { getMediaUrl } from '../utils/url';
 import useAuthStore from '../store/authStore';
 
 const studentLinks = [
@@ -92,7 +93,7 @@ export default function Sidebar({ isOpen, onClose }) {
         {isProfileLoading ? (
           <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', animation: 'pulse 1.5s infinite' }} />
         ) : user?.avatar ? (
-          <img src={user.avatar} alt="Profile" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+          <img src={getMediaUrl(user.avatar)} alt="Profile" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
         ) : (
           <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
             {(user?.first_name || user?.username || '?')[0].toUpperCase()}

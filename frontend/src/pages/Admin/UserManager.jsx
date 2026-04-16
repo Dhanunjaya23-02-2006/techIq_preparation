@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import { authService } from '../../services/authService';
 import { paymentService } from '../../services/paymentService';
 import TiltCard from '../../components/TiltCard';
+import { getMediaUrl } from '../../utils/url';
 // Remove date-fns import to avoid installation dependency
 
 export default function UserManager() {
@@ -628,7 +629,7 @@ export default function UserManager() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <div style={{ position: 'relative' }}>
                           {user.avatar ? (
-                            <img src={user.avatar} style={{ width: '52px', height: '52px', borderRadius: '14px', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.05)' }} alt={user.username} />
+                            <img src={getMediaUrl(user.avatar)} style={{ width: '52px', height: '52px', borderRadius: '14px', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.05)' }} alt={user.username} />
                           ) : (
                             <div style={{
                               width: '52px', height: '52px', borderRadius: '14px',

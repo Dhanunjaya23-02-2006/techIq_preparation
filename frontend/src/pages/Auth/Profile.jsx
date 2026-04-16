@@ -5,6 +5,7 @@ import { HiUser, HiPhone, HiMail, HiAcademicCap, HiTranslate, HiBadgeCheck, HiCa
 import useAuthStore from '../../store/authStore';
 import { paymentService } from '../../services/paymentService';
 import toast from 'react-hot-toast';
+import { getMediaUrl } from '../../utils/url';
 
 const PlanDetailsModal = ({ isOpen, onClose, planData, onUpgrade }) => {
   if (!isOpen || !planData) return null;
@@ -195,7 +196,7 @@ export default function Profile() {
                 }}
               >
                 {user?.avatar ? (
-                  <img src={user.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={getMediaUrl(user.avatar)} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, var(--saffron), #e67e22)', color: 'white', fontSize: '3rem', fontWeight: 800 }}>
                     {(user?.first_name || user?.username || '?')[0].toUpperCase()}

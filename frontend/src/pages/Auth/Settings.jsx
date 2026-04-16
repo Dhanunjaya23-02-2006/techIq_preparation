@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { HiUser, HiPhone, HiMail, HiAcademicCap, HiTranslate, HiCamera, HiSave, HiLockClosed, HiEye, HiEyeOff } from 'react-icons/hi';
 import toast from 'react-hot-toast';
+import { getMediaUrl } from '../../utils/url';
 import useAuthStore from '../../store/authStore';
 
 export default function Settings() {
@@ -20,7 +21,7 @@ export default function Settings() {
   });
 
   const [showPassword, setShowPassword] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState(user?.avatar || null);
+  const [avatarPreview, setAvatarPreview] = useState(user?.avatar ? getMediaUrl(user.avatar) : null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
