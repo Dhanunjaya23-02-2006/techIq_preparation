@@ -83,12 +83,20 @@ export default function TestResult() {
             />
           )}
           <div style={{ 
-            width: '150px', height: '150px', borderRadius: '50%', 
-            background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+            width: '180px', height: '180px', borderRadius: '50%', 
+            background: 'rgba(255,255,255,0.03)', 
+            border: `2px solid ${score >= 0 ? 'rgba(255, 153, 51, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            boxShadow: score >= 0 ? '0 0 30px rgba(255,153,51,0.05)' : '0 0 30px rgba(239,68,68,0.05)'
           }}>
-            <span style={{ fontSize: '3rem', fontWeight: 900 }} className="gradient-text">{score}</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Score</span>
+            <span style={{ 
+              fontSize: score.toString().length > 4 ? '2.5rem' : '3.5rem', 
+              fontWeight: 900,
+              background: score >= 0 ? 'linear-gradient(135deg, #FF9933 0%, #FFFFFF 100%)' : 'linear-gradient(135deg, #ef4444 0%, #ff9999 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>{score}</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total Score</span>
           </div>
         </div>
 

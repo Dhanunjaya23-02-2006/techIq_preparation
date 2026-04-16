@@ -125,7 +125,7 @@ export default function Analytics() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '40px' }}>
         {[
           { label: 'Overall Accuracy', value: `${stats.accuracy}%`, icon: HiCheckCircle, color: '#10b981', trend: stats.accuracy_trend || '0%' },
-          { label: 'Average Score', value: stats.average_score, icon: HiTrendingUp, color: '#f59e0b', trend: stats.score_trend || '0 pts' },
+          { label: 'Average Score', value: Number(stats.average_score).toFixed(2), icon: HiTrendingUp, color: '#f59e0b', trend: stats.score_trend || '0 pts' },
           { label: 'Total Tests', value: stats.total_tests, icon: HiAcademicCap, color: '#3b82f6', trend: 'Lifetime' },
           { label: 'Total XP', value: stats.total_xp, icon: HiLightningBolt, color: '#6366f1', trend: 'Ranked' },
         ].map(({ label, value, icon: Icon, color, trend }) => (
@@ -231,7 +231,7 @@ export default function Analytics() {
                    </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                   <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--saffron)' }}>{attempt.score}</div>
+                   <div style={{ fontSize: '1.4rem', fontWeight: 900, color: attempt.score >= 0 ? 'var(--saffron)' : '#ef4444' }}>{Number(attempt.score).toFixed(2)}</div>
                    <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--green)' }}>COMPLETED</div>
                 </div>
               </div>

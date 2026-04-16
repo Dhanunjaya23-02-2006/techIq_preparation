@@ -311,7 +311,7 @@ def submit_test(
         )
         db.add(q_attempt)
         
-    score = (correct_count * test.marks_per_question) - (wrong_count * test.negative_marking)
+    score = round((correct_count * test.marks_per_question) - (wrong_count * test.negative_marking), 2)
     
     attempt.score = score
     attempt.correct = correct_count
