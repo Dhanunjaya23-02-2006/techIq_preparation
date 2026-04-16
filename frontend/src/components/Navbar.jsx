@@ -299,7 +299,15 @@ export default function Navbar({ onMenuClick }) {
               border: user?.avatar ? '2px solid var(--saffron)' : 'none'
             }}>
               {user?.avatar ? (
-                <img src={getMediaUrl(user.avatar)} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img 
+                  src={getMediaUrl(user.avatar)} 
+                  alt="Avatar" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user?.first_name || user?.username) + '&background=random&color=fff';
+                  }}
+                />
               ) : (
                 user?.first_name?.[0] || user?.username?.[0] || <HiUser />
               )}

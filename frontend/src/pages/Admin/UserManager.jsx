@@ -342,7 +342,7 @@ export default function UserManager() {
               if (!u.last_seen) return false;
               const lastSeen = new Date(u.last_seen);
               const now = new Date();
-              return (now - lastSeen) / 1000 / 60 < 5;
+              return (now - lastSeen) / 1000 / 60 < 2;
             }).length, 
             icon: <HiOutlineCheckCircle size={24} />, 
             color: '#10B981' 
@@ -629,7 +629,15 @@ export default function UserManager() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <div style={{ position: 'relative' }}>
                           {user.avatar ? (
-                            <img src={getMediaUrl(user.avatar)} style={{ width: '52px', height: '52px', borderRadius: '14px', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.05)' }} alt={user.username} />
+                            <img 
+                              src={getMediaUrl(user.avatar)} 
+                              style={{ width: '52px', height: '52px', borderRadius: '14px', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.05)' }} 
+                              alt={user.username}
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.first_name || user.username) + '&background=random&color=fff';
+                              }}
+                            />
                           ) : (
                             <div style={{
                               width: '52px', height: '52px', borderRadius: '14px',
@@ -644,7 +652,7 @@ export default function UserManager() {
                             if (!user.last_seen) return false;
                             const ls = new Date(user.last_seen);
                             const n = new Date();
-                            return (n - ls) / 1000 / 60 < 5;
+                            return (n - ls) / 1000 / 60 < 2;
                           })() && (
                              <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '14px', height: '14px', background: '#10b981', borderRadius: '50%', border: '3px solid #0f172a' }}></div>
                           )}
@@ -682,7 +690,7 @@ export default function UserManager() {
                       </div>
                     </td>
                     <td style={{ padding: '20px 30px', fontWeight: 700, color: '#f8fafc' }}>
-                      {formatTime(user.total_time_spent)}
+                      {formatTime(user.total_active_seconds || user.total_time_spent)}
                     </td>
                     <td style={{ padding: '20px 30px', color: '#94a3b8', fontSize: '0.95rem' }}>
                       {formatLastLogin(user.last_login)}

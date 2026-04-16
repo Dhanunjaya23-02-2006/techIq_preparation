@@ -60,6 +60,13 @@ def get_current_user(
         from datetime import datetime, timedelta
         now = datetime.utcnow()
         if not user.last_seen or (now - user.last_seen) > timedelta(minutes=1):
+            if user.last_seen:
+                # Add elapsed time to total active seconds
+                elapsed = int((now - user.last_seen).total_seconds())
+                # Only add if it's reasonable (e.g. less than 1 hour to avoid jumps after being offline)
+                if elapsed < 3600:
+                    user.total_active_seconds += elapsed
+            
             user.last_seen = now
             db.add(user)
             db.commit()

@@ -29,6 +29,8 @@ class User(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     last_seen: Optional[datetime] = Field(default=None)
+    last_login_at: Optional[datetime] = Field(default=None)
+    total_active_seconds: int = Field(default=0)
 
     @property
     def current_plan(self) -> str:
@@ -108,8 +110,8 @@ class User(SQLModel, table=True):
 
     @property
     def last_login(self) -> Optional[datetime]:
-        """Alias for last_seen to match frontend expectations."""
-        return self.last_seen
+        """Return the actual last login timestamp."""
+        return self.last_login_at or self.last_seen
 
     @property
     def total_time_spent(self) -> int:

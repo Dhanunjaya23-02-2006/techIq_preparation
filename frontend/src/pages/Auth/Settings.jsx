@@ -164,7 +164,15 @@ export default function Settings() {
               }}
             >
               {avatarPreview ? (
-                <img src={avatarPreview} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img 
+                  src={avatarPreview} 
+                  alt="Avatar" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user?.first_name || user?.username) + '&background=random&color=fff';
+                  }}
+                />
               ) : (
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--primary)', color: 'white', fontSize: '2.5rem', fontWeight: 800 }}>
                   {(user?.first_name || user?.username || '?')[0].toUpperCase()}

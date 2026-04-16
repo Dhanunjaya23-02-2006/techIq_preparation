@@ -45,6 +45,7 @@ class UserOut(UserBase):
     last_seen: Optional[datetime] = None
     last_login: Optional[datetime] = None
     total_time_spent: int = 0
+    total_active_seconds: int = 0
     mfa_enabled: bool = False
 
     class Config:

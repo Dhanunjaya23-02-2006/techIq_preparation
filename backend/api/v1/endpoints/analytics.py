@@ -348,11 +348,12 @@ def get_admin_dashboard(
         select(func.count(func.distinct(VisitorRecord.ip_address))).where(VisitorRecord.timestamp >= today_start)
     ).one()
     
-    # Live Users (last seen in last 5 minutes)
-    five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
+    # Live Students (last seen in last 2 minutes)
+    two_minutes_ago = datetime.utcnow() - timedelta(minutes=2)
     live_users = db.exec(
         select(func.count(User.id)).where(
-            User.last_seen >= five_minutes_ago
+            User.role == "student",
+            User.last_seen >= two_minutes_ago
         )
     ).one()
 

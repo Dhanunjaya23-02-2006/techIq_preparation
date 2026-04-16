@@ -319,6 +319,10 @@ async def login_access_token(
         user.id, expires_delta=refresh_token_expires
     )
     
+    # Update last login timestamp
+    user.last_login_at = datetime.utcnow()
+    db.add(user)
+    
     # Store refresh token in DB
     db_refresh_token = RefreshToken(
         token=refresh_token_str,
