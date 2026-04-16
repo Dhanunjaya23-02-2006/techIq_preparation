@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import useTestStore from '../../store/testStore';
@@ -9,6 +9,7 @@ export default function TestEngine() {
   const navigate = useNavigate();
   const { currentTest, questions, answers, currentIndex, timeLeft, markedQuestions,
     setTest, selectAnswer, toggleMark, setCurrentIndex, tick, reset } = useTestStore();
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (location.state) setTest(location.state);
@@ -32,6 +33,8 @@ export default function TestEngine() {
   };
 
   const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
     const answerList = questions.map(q => ({
       question_id: q.id,
       selected_option: answers[q.id] || null,
@@ -51,7 +54,11 @@ export default function TestEngine() {
         reset();
         navigate('/test-result', { state: res.data.data });
       }
-    } catch { toast.error('Submit failed'); }
+    } catch (err) { 
+      toast.error('Submit failed'); 
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!currentTest || questions.length === 0) return null;
@@ -71,7 +78,14 @@ export default function TestEngine() {
         }}>
           ⏱ {formatTime(timeLeft)}
         </div>
-        <button className="btn-danger" style={{ padding: '8px 20px' }} onClick={handleSubmit}>Submit Test</button>
+        <button 
+          className="btn-danger" 
+          style={{ padding: '8px 20px', opacity: submitting ? 0.7 : 1 }} 
+          onClick={handleSubmit}
+          disabled={submitting}
+        >
+          {submitting ? 'Submitting...' : 'Submit Test'}
+        </button>
       </div>
 
       <div className="test-engine-body">
