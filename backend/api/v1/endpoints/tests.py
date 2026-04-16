@@ -39,12 +39,9 @@ def list_mock_tests(
     if is_grand_test is not None:
         statement = statement.where(MockTest.is_grand_test == is_grand_test)
     
-    # NEW LIMIT: No Plan users see only basic free tests
-    user_plan = current_user.current_plan
-    if user_plan == "No Plan" and not current_user.is_superuser:
-        statement = statement.where(MockTest.is_free == True)
-    else:
-        statement = statement.offset(skip).limit(limit)
+    # Show all active tests to all users, let frontend handle locking UI
+    # This ensures "No Plan" users can still see that tests exist.
+    statement = statement.offset(skip).limit(limit)
     
     results = db.exec(statement).all()
     

@@ -15,7 +15,7 @@ export default function TestCreator() {
   const [form, setForm] = useState({
     title: '', description: '', exam_type: 'ntpc', subject: '',
     time_limit: 60, negative_marking: 0.25, marks_per_question: 1.0, is_grand_test: false,
-    is_pyq: false
+    is_pyq: false, is_free: false, is_active: true
   });
   const [pdfFile, setPdfFile] = useState(null);
   
@@ -48,7 +48,9 @@ export default function TestCreator() {
         negative_marking: isNaN(parseFloat(data.negative_marking)) ? 0.25 : parseFloat(data.negative_marking),
         marks_per_question: isNaN(parseFloat(data.marks_per_question)) ? 1.0 : parseFloat(data.marks_per_question),
         is_grand_test: data.is_grand_test,
-        is_pyq: data.is_pyq || false
+        is_pyq: data.is_pyq || false,
+        is_free: data.is_free || false,
+        is_active: data.is_active ?? true
       });
       if (data.questions) {
         setSelectedIds(new Set(data.questions.map(q => typeof q === 'object' ? q.id : q)));
@@ -162,7 +164,7 @@ export default function TestCreator() {
         setForm({
           title: '', description: '', exam_type: 'ntpc', subject: '',
           time_limit: 60, negative_marking: 0.25, marks_per_question: 1.0, is_grand_test: false,
-          is_pyq: false
+          is_pyq: false, is_free: false, is_active: true
         });
         setPdfFile(null);
         setSelectedIds(new Set());
@@ -263,6 +265,14 @@ export default function TestCreator() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <input type="checkbox" id="is_pyq" checked={form.is_pyq} onChange={e => setForm({...form, is_pyq: e.target.checked})} />
                 <label htmlFor="is_pyq" style={{ fontSize: '0.9rem', color: 'var(--text-primary)', cursor: 'pointer' }}>Mark as Previous Year (PYQ)</label>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input type="checkbox" id="is_free" checked={form.is_free} onChange={e => setForm({...form, is_free: e.target.checked})} />
+                <label htmlFor="is_free" style={{ fontSize: '0.9rem', color: 'var(--saffron)', fontWeight: 700, cursor: 'pointer' }}>✨ Mark as FREE Test</label>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input type="checkbox" id="is_active" checked={form.is_active} onChange={e => setForm({...form, is_active: e.target.checked})} />
+                <label htmlFor="is_active" style={{ fontSize: '0.9rem', color: 'var(--text-primary)', cursor: 'pointer' }}>Is Active (Visible to students)</label>
               </div>
             </div>
 

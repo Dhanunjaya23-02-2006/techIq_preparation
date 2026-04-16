@@ -21,7 +21,7 @@ async def log_visit(
     db: Session = Depends(get_db)
 ) -> Any:
     """Log a site visit."""
-    client_host = request.client.host
+    client_host = request.client.host if request.client else "unknown"
     
     # Check if a visit from this IP is already logged today
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
