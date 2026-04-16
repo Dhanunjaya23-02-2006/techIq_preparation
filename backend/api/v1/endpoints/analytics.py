@@ -125,13 +125,17 @@ def get_performance_stats(
     score_trend = "0"
     
     if len(last_5) > 0 and len(prev_5) > 0:
-        last_5_acc = (sum(a.correct for a in last_5) / sum(a.total_questions for a in last_5) * 100) if sum(a.total_questions for a in last_5) > 0 else 0
-        prev_5_acc = (sum(a.correct for a in prev_5) / sum(a.total_questions for a in prev_5) * 100) if sum(a.total_questions for a in prev_5) > 0 else 0
+        last_5_total_q = sum((a.total_questions or 0) for a in last_5)
+        last_5_acc = (sum((a.correct or 0) for a in last_5) / last_5_total_q * 100) if last_5_total_q > 0 else 0
+        
+        prev_5_total_q = sum((a.total_questions or 0) for a in prev_5)
+        prev_5_acc = (sum((a.correct or 0) for a in prev_5) / prev_5_total_q * 100) if prev_5_total_q > 0 else 0
+        
         acc_diff = last_5_acc - prev_5_acc
         accuracy_trend = f"{'+' if acc_diff >= 0 else ''}{acc_diff:.1f}%"
         
-        last_5_avg = sum(a.score for a in last_5) / len(last_5)
-        prev_5_avg = sum(a.score for a in prev_5) / len(prev_5)
+        last_5_avg = sum((a.score or 0) for a in last_5) / len(last_5)
+        prev_5_avg = sum((a.score or 0) for a in prev_5) / len(prev_5)
         score_diff = last_5_avg - prev_5_avg
         score_trend = f"{'+' if score_diff >= 0 else ''}{score_diff:.1f} pts"
 
@@ -152,11 +156,11 @@ def get_performance_stats(
             "message": ""
         }
 
-    total_correct = sum(a.correct for a in total_stats_attempts)
-    total_wrong = sum(a.wrong for a in total_stats_attempts)
-    total_questions = sum(a.total_questions for a in total_stats_attempts)
+    total_correct = sum((a.correct or 0) for a in total_stats_attempts)
+    total_wrong = sum((a.wrong or 0) for a in total_stats_attempts)
+    total_questions = sum((a.total_questions or 0) for a in total_stats_attempts)
     accuracy = (total_correct / total_questions * 100) if total_questions > 0 else 0
-    avg_score = sum(a.score for a in total_stats_attempts) / total_tests
+    avg_score = sum((a.score or 0) for a in total_stats_attempts) / total_tests
 
     # Subject-wise stats
     subject_stats_query = db.exec(
@@ -280,9 +284,9 @@ def get_performance_stats(
             "peer_feed": [
                 {
                     "user": u.username,
-                    "action": f"completed {a.total_questions} question test",
+                    "action": f"completed {a.total_questions or 0} question test",
                     "time": a.submitted_at,
-                    "score": f"{a.score}/{a.total_questions}" if a.total_questions else str(a.score)
+                    "score": f"{a.score or 0}/{a.total_questions}" if a.total_questions else str(a.score or 0)
                 }
                 for a, u in db.exec(
                     select(TestAttempt, User)
@@ -293,8 +297,8 @@ def get_performance_stats(
                 ).all()
             ],
             "recent_achievements": [
-                {"title": "Perfect Score", "icon": "🎯", "desc": "100% accuracy in a test"} if any(a.correct == a.total_questions for a in total_stats_attempts if a.total_questions > 0) else None,
-                {"title": "Speed Demon", "icon": "⚡", "desc": "Completed test in record time"} if any(a.time_taken < 300 for a in total_stats_attempts) else None,
+                {"title": "Perfect Score", "icon": "🎯", "desc": "100% accuracy in a test"} if any(a.correct == a.total_questions for a in total_stats_attempts if a.total_questions and a.total_questions > 0) else None,
+                {"title": "Speed Demon", "icon": "⚡", "desc": "Completed test in record time"} if any(a.time_taken is not None and a.time_taken < 300 for a in total_stats_attempts) else None,
             ],
             "recommendation": {
                 "text": f"Agent, your current {accuracy:.1f}% accuracy is impressive. To breach the elite ranks, focus on {weak_topics[0]['question__topic'] if weak_topics else 'Mock Tests'} modules. Your {streak}-day streak grants a Level UP bonus." if accuracy > 70 else f"Focus on {weak_topics[0]['question__topic'] if weak_topics else 'Basic Concepts'} to improve your accuracy. Consistent practice will help you level up faster.",

@@ -29,19 +29,56 @@ def create_db_and_tables():
                 "ALTER TABLE login_attempts DROP CONSTRAINT IF EXISTS login_attempts_username_fkey"
             ))
             
-            # DB Migration: Add missing is_elite columns
+            # DB Migration: Add missing columns to 'plans'
             try:
                 conn.execute(text("ALTER TABLE plans ADD COLUMN IF NOT EXISTS is_elite BOOLEAN DEFAULT FALSE"))
             except Exception as inner_e:
-                print(f"Skipping plans.is_elite addition (might exist): {inner_e}")
+                print(f"Skipping plans.is_elite addition: {inner_e}")
                 
+            # DB Migration: Add missing columns to 'users'
             try:
                 conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_elite BOOLEAN DEFAULT FALSE"))
             except Exception as inner_e:
-                print(f"Skipping users.is_elite addition (might exist): {inner_e}")
+                print(f"Skipping users.is_elite addition: {inner_e}")
+            
+            try:
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP"))
+            except Exception as inner_e:
+                print(f"Skipping users.last_login_at addition: {inner_e}")
+                
+            try:
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS total_active_seconds INTEGER DEFAULT 0"))
+            except Exception as inner_e:
+                print(f"Skipping users.total_active_seconds addition: {inner_e}")
+
+            try:
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_secret VARCHAR"))
+            except Exception as inner_e:
+                print(f"Skipping users.mfa_secret addition: {inner_e}")
+
+            try:
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN DEFAULT FALSE"))
+            except Exception as inner_e:
+                print(f"Skipping users.mfa_enabled addition: {inner_e}")
+
+            try:
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE"))
+            except Exception as inner_e:
+                print(f"Skipping users.is_verified addition: {inner_e}")
+
+            # DB Migration: Add missing columns to 'test_attempts'
+            try:
+                conn.execute(text("ALTER TABLE test_attempts ADD COLUMN IF NOT EXISTS rank INTEGER"))
+            except Exception as inner_e:
+                print(f"Skipping test_attempts.rank addition: {inner_e}")
+                
+            try:
+                conn.execute(text("ALTER TABLE test_attempts ADD COLUMN IF NOT EXISTS percentile FLOAT DEFAULT 0"))
+            except Exception as inner_e:
+                print(f"Skipping test_attempts.percentile addition: {inner_e}")
 
             conn.commit()
-            print("DB Migration: login_attempts FK constraint and missing columns check complete.")
+            print("DB Migration: All columns check complete.")
     except Exception as e:
         print(f"DB Migration note (non-critical): {e}")
 

@@ -65,7 +65,7 @@ def get_current_user(
                 elapsed = int((now - user.last_seen).total_seconds())
                 # Only add if it's reasonable (e.g. less than 1 hour to avoid jumps after being offline)
                 if elapsed < 3600:
-                    user.total_active_seconds += elapsed
+                    user.total_active_seconds = (user.total_active_seconds or 0) + elapsed
             
             user.last_seen = now
             db.add(user)
