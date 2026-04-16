@@ -17,11 +17,45 @@ export default function AdminDashboard() {
   const { user } = useAuthStore();
   const [statsData, setStatsData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState([]);
 
 
   useEffect(() => {
     fetchStats();
+    fetchActivities();
+    
+    // Auto-refresh stats every 30 seconds for real-time monitoring
+    const pollInterval = setInterval(() => {
+      fetchStats();
+      fetchActivities();
+    }, 30000);
+
+    return () => clearInterval(pollInterval);
   }, []);
+
+  const fetchActivities = async () => {
+    try {
+      const resp = await notificationService.getNotifications(0, 5);
+      if (resp.data) {
+        setActivities(resp.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch activities", error);
+    }
+  };
+
+  const formatTimeAgo = (dateStr) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} min${minutes > 1 ? 's' : ''} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
+  };
 
   const fetchStats = async () => {
     try {
@@ -176,22 +210,21 @@ export default function AdminDashboard() {
         <motion.div variants={itemVariants} className="glass-card" style={{ padding: '32px' }}>
           <h3 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '25px' }}>Live Activity</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {[
-              { user: 'System', action: 'Fetched real-time dashboard data', time: 'Just now' },
-              { user: 'Admin', action: 'Accessed stats panel', time: '1 min ago' },
-              { user: 'Database', action: 'Subscription data indexed', time: '10 mins ago' },
-              { user: 'Server', action: 'All systems green', time: 'Ongoing' }
-            ].map((activity, i) => (
-              <div key={i} style={{ display: 'flex', gap: '15px', paddingBottom: '15px', borderBottom: i !== 3 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+            {activities.length > 0 ? activities.map((activity, i) => (
+              <div key={activity.id || i} style={{ display: 'flex', gap: '15px', paddingBottom: '15px', borderBottom: i !== activities.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--saffron)', marginTop: '6px' }} />
                 <div>
                   <p style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-                    <span style={{ fontWeight: 700 }}>{activity.user}</span> {activity.action}
+                    <span style={{ fontWeight: 700 }}>{activity.title}</span>: {activity.message}
                   </p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>{activity.time}</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>{formatTimeAgo(activity.created_at)}</p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px' }}>
+                No recent activity.
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

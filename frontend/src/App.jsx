@@ -53,6 +53,21 @@ function AppRoutes() {
       sessionStorage.setItem('has_visited', 'true');
     }
 
+    // Heartbeat to keep user "live" in the admin dashboard
+    let heartbeatInterval;
+    if (isAuthenticated) {
+      heartbeatInterval = setInterval(() => {
+        const token = localStorage.getItem('access_token');
+        if (token) {
+          const url = (import.meta.env.VITE_API_URL || '/api/v1') + '/accounts/heartbeat';
+          fetch(url, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          }).catch(() => {});
+        }
+      }, 60000); // Every 1 minute
+    }
+
     const handleBeforeUnload = () => {
       if (isAuthenticated) {
         const token = localStorage.getItem('access_token');
@@ -70,7 +85,10 @@ function AppRoutes() {
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+    };
   }, [isAuthenticated, fetchProfile]);
 
   return (

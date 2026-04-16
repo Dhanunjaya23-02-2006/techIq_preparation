@@ -342,6 +342,30 @@ def read_user_me(
     return current_user
 
 
+@router.post("/heartbeat")
+def user_heartbeat(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """Update last_seen timestamp via an explicit heartbeat."""
+    # deps.py already updates last_seen on every request, but this 
+    # provides an explicit endpoint for polling.
+    return {"status": "ok", "last_seen": current_user.last_seen}
+
+
+@router.post("/offline")
+def user_offline(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """Mark user as offline by clearing or aging their last_seen timestamp."""
+    # Setting it to 10 minutes ago ensures they aren't counted as "live" (5 min threshold)
+    current_user.last_seen = datetime.utcnow() - timedelta(minutes=10)
+    db.add(current_user)
+    db.commit()
+    return {"status": "offline"}
+
+
 @router.patch("/profile", response_model=UserOut)
 async def update_user_me(
     *,
