@@ -226,10 +226,25 @@ export default function UserManager() {
     return `${s}s`;
   };
 
+  const parseDate = (dateString) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return null;
+    
+    // If date string doesn't contain a timezone indicator (Z or + or - offset), 
+    // it's likely from our backend which sends UTC as naive ISO-8601.
+    // Appending 'Z' tells the browser to treat it as UTC.
+    if (!dateString.endsWith('Z') && !dateString.includes('+') && !/-\d{2}:\d{2}$/.test(dateString.slice(-6))) {
+      return new Date(dateString + 'Z');
+    }
+    return date;
+  };
+
   const formatLastLogin = (dateString) => {
-    if (!dateString) return 'Never';
+    const date = parseDate(dateString);
+    if (!date) return 'Never';
+    
     try {
-      const date = new Date(dateString);
       const now = new Date();
       const diffInSeconds = Math.floor((now - date) / 1000);
       
@@ -339,8 +354,8 @@ export default function UserManager() {
           { 
             label: 'Online Students', 
             value: users.filter(u => {
-              if (!u.last_seen) return false;
-              const lastSeen = new Date(u.last_seen);
+              const lastSeen = parseDate(u.last_seen);
+              if (!lastSeen) return false;
               const now = new Date();
               return (now - lastSeen) / 1000 / 60 < 2;
             }).length, 
@@ -649,8 +664,8 @@ export default function UserManager() {
                             </div>
                           )}
                           {(() => {
-                            if (!user.last_seen) return false;
-                            const ls = new Date(user.last_seen);
+                            const ls = parseDate(user.last_seen);
+                            if (!ls) return false;
                             const n = new Date();
                             return (n - ls) / 1000 / 60 < 2;
                           })() && (

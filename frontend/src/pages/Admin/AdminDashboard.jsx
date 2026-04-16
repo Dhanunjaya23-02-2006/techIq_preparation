@@ -44,8 +44,19 @@ export default function AdminDashboard() {
     }
   };
 
+  const parseDate = (dateString) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return null;
+    if (!dateString.endsWith('Z') && !dateString.includes('+') && !/-\d{2}:\d{2}$/.test(dateString.slice(-6))) {
+      return new Date(dateString + 'Z');
+    }
+    return date;
+  };
+
   const formatTimeAgo = (dateStr) => {
-    const date = new Date(dateStr);
+    const date = parseDate(dateStr);
+    if (!date) return 'Never';
     const now = new Date();
     const seconds = Math.floor((now - date) / 1000);
     
