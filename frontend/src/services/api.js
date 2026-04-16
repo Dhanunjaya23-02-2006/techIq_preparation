@@ -114,7 +114,17 @@ api.interceptors.response.use(
     
     // Some routes might handle errors themselves, but a global one is a good safety net
     if (status && status !== 401 && status !== 404) {
-      const message = error.response?.data?.detail || error.response?.data?.message || 'Server Error. Please try again.';
+      let message = error.response?.data?.detail || error.response?.data?.message || 'Server Error. Please try again.';
+      
+      // Fix React Error #31: Objects are not valid as a React child
+      // FastAPI 422 errors return an array of objects in 'detail'
+      if (typeof message === 'object') {
+        if (Array.isArray(message)) {
+          message = message.map(err => `${err.loc.join('.')}: ${err.msg}`).join(', ');
+        } else {
+          message = JSON.stringify(message);
+        }
+      }
       
       // We use a dynamic import for toast to avoid circular dependency if needed
       import('react-hot-toast').then(({ toast }) => {

@@ -438,27 +438,57 @@ def update_mock_test(
     *,
     db: Session = Depends(get_db),
     test_id: int,
-    mock_in: MockTestUpdate,
+    title: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    exam_type: Optional[str] = Form(None),
+    subject: Optional[str] = Form(None),
+    time_limit: Optional[int] = Form(None),
+    negative_marking: Optional[float] = Form(None),
+    marks_per_question: Optional[float] = Form(None),
+    is_grand_test: Optional[bool] = Form(None),
+    is_pyq: Optional[bool] = Form(None),
+    is_free: Optional[bool] = Form(None),
+    is_active: Optional[bool] = Form(None),
+    question_ids: List[str] = Form([]),
+    pdf_file: Optional[UploadFile] = File(None),
     current_user: User = Depends(get_current_active_superuser),
 ) -> Any:
+    """
+    Update a mock test.
+    """
     test = db.get(MockTest, test_id)
     if not test:
         raise HTTPException(status_code=404, detail="Mock test not found")
     
-    update_data = mock_in.model_dump(exclude_unset=True)
-    if "question_ids" in update_data:
-        q_ids = update_data.pop("question_ids")
+    # Update simple fields
+    if title is not None: test.title = title
+    if description is not None: test.description = description
+    if exam_type is not None: test.exam_type = exam_type
+    if subject is not None: test.subject = subject
+    if time_limit is not None: test.time_limit = time_limit
+    if negative_marking is not None: test.negative_marking = negative_marking
+    if marks_per_question is not None: test.marks_per_question = marks_per_question
+    if is_grand_test is not None: test.is_grand_test = is_grand_test
+    if is_pyq is not None: test.is_pyq = is_pyq
+    if is_free is not None: test.is_free = is_free
+    if is_active is not None: test.is_active = is_active
+
+    if pdf_file:
+        file_path = f"media/pdfs/{pdf_file.filename}"
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, "wb") as f:
+            f.write(pdf_file.file.read())
+        test.pdf_file = file_path
+
+    if question_ids:
         # Clear existing links
         from sqlmodel import delete
         db.exec(delete(MockTestQuestionLink).where(MockTestQuestionLink.mock_test_id == test_id))
         # Add new links
-        for q_id in q_ids:
+        for q_id in question_ids:
             link = MockTestQuestionLink(mock_test_id=test_id, question_id=int(q_id))
             db.add(link)
-        test.total_questions = len(q_ids)
-        
-    for k, v in update_data.items():
-        setattr(test, k, v)
+        test.total_questions = len(question_ids)
         
     db.add(test)
     db.commit()
