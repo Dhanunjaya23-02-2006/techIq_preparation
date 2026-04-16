@@ -325,6 +325,34 @@ def submit_test(
     db.commit()
     db.refresh(attempt)
     
+    # Calculate Rank and Percentile for this specific test
+    all_attempts_for_test = db.exec(
+        select(TestAttempt.score)
+        .where(TestAttempt.test_id == attempt.test_id, TestAttempt.is_completed == True)
+        .order_by(desc(TestAttempt.score))
+    ).all()
+    
+    if all_attempts_for_test:
+        # Rank is 1 + number of attempts with higher score
+        better_scores_count = db.exec(
+            select(func.count(TestAttempt.id))
+            .where(
+                TestAttempt.test_id == attempt.test_id, 
+                TestAttempt.is_completed == True, 
+                TestAttempt.score > score
+            )
+        ).one()
+        attempt.rank = better_scores_count + 1
+        
+        # Percentile calculation
+        lower_scores_count = len([s for s in all_attempts_for_test if s < score])
+        percentile = (lower_scores_count / len(all_attempts_for_test)) * 100
+        attempt.percentile = round(percentile, 2)
+        
+        db.add(attempt)
+        db.commit()
+        db.refresh(attempt)
+
     # Create notification for student performance
     accuracy = (correct_count / test.total_questions * 100) if test.total_questions > 0 else 0
     notif = Notification(

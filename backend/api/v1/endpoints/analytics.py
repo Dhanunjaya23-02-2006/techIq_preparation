@@ -100,6 +100,10 @@ def get_performance_stats(
             "id": row[0].id,
             "score": row[0].score,
             "total_questions": row[0].total_questions,
+            "correct": row[0].correct,
+            "wrong": row[0].wrong,
+            "rank": row[0].rank,
+            "percentile": row[0].percentile,
             "submitted_at": row[0].submitted_at,
             "test_title": row[1]
         } for row in attempts_query
