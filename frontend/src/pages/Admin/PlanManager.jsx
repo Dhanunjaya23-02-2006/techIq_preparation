@@ -285,22 +285,24 @@ export default function PlanManager() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div className="form-group">
-                    <label>Plan Name</label>
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.9rem', color: '#cbd5e1', fontWeight: 600 }}>Plan Name</label>
                     <input 
                       type="text" 
                       required 
+                      className="input-field"
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
                       placeholder="e.g. Pro Premium"
                     />
                   </div>
-                  <div className="form-group">
-                    <label>UI Slug (Optional)</label>
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.9rem', color: '#cbd5e1', fontWeight: 600 }}>UI Slug (Optional)</label>
                     <input 
                       type="text" 
+                      className="input-field"
                       value={formData.ui_slug}
                       onChange={(e) => setFormData({...formData, ui_slug: e.target.value})}
                       placeholder="e.g. veteran"
@@ -308,39 +310,44 @@ export default function PlanManager() {
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label>Description</label>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.9rem', color: '#cbd5e1', fontWeight: 600 }}>Description</label>
                   <textarea 
-                    rows="3"
+                    rows="4"
+                    className="input-field"
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                     placeholder="Briefly describe the plan benefits..."
+                    style={{ resize: 'vertical', minHeight: '100px' }}
                   ></textarea>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-                  <div className="form-group">
-                    <label>Price (₹)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.9rem', color: '#cbd5e1', fontWeight: 600 }}>Price (₹)</label>
                     <input 
                       type="number" 
                       required 
+                      className="input-field"
                       value={formData.price}
                       onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value)})}
                     />
                   </div>
-                  <div className="form-group">
-                    <label>Duration (Days)</label>
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.9rem', color: '#cbd5e1', fontWeight: 600 }}>Duration (Days)</label>
                     <input 
                       type="number" 
                       required 
+                      className="input-field"
                       value={formData.duration_days}
                       onChange={(e) => setFormData({...formData, duration_days: parseInt(e.target.value)})}
                     />
                   </div>
-                  <div className="form-group">
-                    <label>Badge</label>
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.9rem', color: '#cbd5e1', fontWeight: 600 }}>Badge</label>
                     <input 
                       type="text" 
+                      className="input-field"
                       value={formData.badge}
                       onChange={(e) => setFormData({...formData, badge: e.target.value})}
                       placeholder="e.g. POPULAR"
@@ -348,47 +355,51 @@ export default function PlanManager() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '20px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', gap: '24px', padding: '10px 0' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: 600 }}>
                     <input 
                       type="checkbox" 
                       checked={formData.is_active}
                       onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
-                      style={{ width: '18px', height: '18px' }}
+                      style={{ width: '20px', height: '20px', accentColor: 'var(--saffron)', cursor: 'pointer' }}
                     />
                     <span>Active</span>
                   </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', color: '#f59e0b' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', color: '#f59e0b', fontSize: '0.95rem', fontWeight: 600 }}>
                     <input 
                       type="checkbox" 
                       checked={formData.is_elite}
                       onChange={(e) => setFormData({...formData, is_elite: e.target.checked})}
-                      style={{ width: '18px', height: '18px' }}
+                      style={{ width: '20px', height: '20px', accentColor: '#f59e0b', cursor: 'pointer' }}
                     />
                     <span>Grant Elite Status</span>
                   </label>
                 </div>
 
-                <div className="form-group">
-                  <label>Features</label>
-                  <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.9rem', color: '#cbd5e1', fontWeight: 600 }}>Features</label>
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
                     <input 
                       type="text" 
+                      className="input-field"
                       value={featureInput}
                       onChange={(e) => setFeatureInput(e.target.value)}
                       placeholder="Add a feature..."
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
                     />
-                    <button type="button" onClick={addFeature} className="btn-secondary" style={{ padding: '0 15px' }}>Add</button>
+                    <button type="button" onClick={addFeature} className="btn-secondary" style={{ padding: '0 24px' }}>Add</button>
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {formData.features.map((f, i) => (
                       <span key={i} style={{ 
                         background: 'rgba(255,153,51,0.1)', border: '1px solid rgba(255,153,51,0.3)',
-                        padding: '4px 10px', borderRadius: '8px', fontSize: '0.8rem',
-                        display: 'flex', alignItems: 'center', gap: '6px'
+                        padding: '6px 12px', borderRadius: '12px', fontSize: '0.85rem',
+                        display: 'flex', alignItems: 'center', gap: '8px'
                       }}>
-                        {f} <HiX size={14} style={{ cursor: 'pointer' }} onClick={() => removeFeature(i)} />
+                        {f} <HiX size={16} style={{ cursor: 'pointer', transition: 'color 0.2s', color: '#fbbf24' }} 
+                        onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                        onMouseLeave={(e) => e.currentTarget.style.color = '#fbbf24'}
+                        onClick={() => removeFeature(i)} />
                       </span>
                     ))}
                   </div>
